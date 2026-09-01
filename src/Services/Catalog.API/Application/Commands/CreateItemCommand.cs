@@ -1,4 +1,4 @@
-﻿using GameBackend.Services.Catalog.API.Application.Common;
+﻿using GameBackend.SharedKernel.Application;
 using GameBackend.Services.Catalog.API.Domain;
 
 namespace GameBackend.Services.Catalog.API.Application.Commands;

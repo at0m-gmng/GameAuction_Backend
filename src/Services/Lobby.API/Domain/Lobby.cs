@@ -6,6 +6,7 @@ namespace GameBackend.Services.Lobby.API.Domain;
 /// <summary>
 /// Агрегат, представляющий игровое лобби — комнату, где собирается группа игроков
 /// и проходит живой аукцион за предмет. Объединяет матчмейкинг и аукцион в единый поток.
+/// Хранит денормализованный снапшот витринных данных предмета для быстрых чтений.
 /// </summary>
 public sealed class Lobby : AggregateRoot
 {
@@ -13,6 +14,21 @@ public sealed class Lobby : AggregateRoot
     /// Идентификатор предмета из каталога, который разыгрывается в этом лобби.
     /// </summary>
     public Guid ItemId { get; private set; }
+
+    /// <summary>
+    /// Снапшот названия предмета (для витрины списка лобби).
+    /// </summary>
+    public string ItemName { get; private set; } = default!;
+
+    /// <summary>
+    /// Снапшот ссылки на изображение предмета (для витрины списка лобби).
+    /// </summary>
+    public string? ItemImageUrl { get; private set; }
+
+    /// <summary>
+    /// Стартовая цена аукциона. До первой ставки отображается как текущая.
+    /// </summary>
+    public decimal StartingPrice { get; private set; }
 
     /// <summary>
     /// Текущий статус лобби.
@@ -46,11 +62,12 @@ public sealed class Lobby : AggregateRoot
 
     /// <summary>
     /// Текущая максимальная ставка. Null, если ставок ещё не было.
+    /// Вычисляется из истории ставок, не хранится отдельно.
     /// </summary>
-    public Bid? CurrentBid { get; private set; }
+    public Bid? CurrentBid => _bids.Count == 0 ? null : _bids.MaxBy(b => b.Amount);
 
     /// <summary>
-    /// Дата и время окончания аукциона. Актуально только в статусе Bidding.
+    /// Дата и время окончания аукциона. Null в статусе Gathering ("STARTING SOON").
     /// </summary>
     public DateTime? EndsAt { get; private set; }
 
@@ -62,12 +79,13 @@ public sealed class Lobby : AggregateRoot
     /// <summary>
     /// Инициализирует новое лобби. Используйте фабричный метод Create.
     /// </summary>
-    /// <param name="itemId">Идентификатор предмета из каталога.</param>
-    /// <param name="maxParticipants">Максимальное количество участников.</param>
-    private Lobby(Guid itemId, int maxParticipants)
+    private Lobby(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
         : base(Guid.NewGuid())
     {
         ItemId = itemId;
+        ItemName = itemName;
+        ItemImageUrl = itemImageUrl;
+        StartingPrice = startingPrice;
         MaxParticipants = maxParticipants;
         Status = LobbyStatus.Gathering;
 
@@ -82,18 +100,21 @@ public sealed class Lobby : AggregateRoot
     }
 
     /// <summary>
-    /// Фабричный метод для создания нового лобби.
+    /// Фабричный метод для создания нового лобби со снапшотом данных предмета.
     /// </summary>
     /// <param name="itemId">Идентификатор предмета из каталога.</param>
+    /// <param name="itemName">Снапшот названия предмета.</param>
+    /// <param name="itemImageUrl">Снапшот ссылки на изображение.</param>
+    /// <param name="startingPrice">Стартовая цена аукциона.</param>
     /// <param name="maxParticipants">Максимальное количество участников.</param>
     /// <returns>Новое лобби в статусе Gathering.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Если maxParticipants меньше 2.</exception>
-    public static Lobby Create(Guid itemId, int maxParticipants)
+    public static Lobby Create(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
     {
         if (maxParticipants < 2)
             throw new ArgumentOutOfRangeException(nameof(maxParticipants), "Минимум 2 участника для аукциона");
 
-        return new Lobby(itemId, maxParticipants);
+        return new Lobby(itemId, itemName, itemImageUrl, startingPrice, maxParticipants);
     }
 
     /// <summary>
@@ -138,14 +159,14 @@ public sealed class Lobby : AggregateRoot
     }
 
     /// <summary>
-    /// Регистрирует новую ставку. Ставка должна быть больше текущей максимальной.
+    /// Регистрирует новую ставку. Первая ставка не ниже стартовой, остальные — выше текущей.
     /// </summary>
     /// <param name="playerId">Идентификатор игрока, делающего ставку.</param>
     /// <param name="amount">Сумма ставки.</param>
     /// <exception cref="InvalidOperationException">Если аукцион не в статусе Bidding.</exception>
     /// <exception cref="InvalidOperationException">Если время аукциона истекло.</exception>
     /// <exception cref="InvalidOperationException">Если игрока нет в лобби.</exception>
-    /// <exception cref="InvalidOperationException">Если ставка не больше текущей.</exception>
+    /// <exception cref="InvalidOperationException">Если ставка некорректна.</exception>
     public void PlaceBid(Guid playerId, decimal amount)
     {
         if (Status != LobbyStatus.Bidding)
@@ -157,12 +178,14 @@ public sealed class Lobby : AggregateRoot
         if (!_participants.Contains(playerId))
             throw new InvalidOperationException("Игрок не является участником лобби");
 
+        if (CurrentBid is null && amount < StartingPrice)
+            throw new InvalidOperationException($"Первая ставка не может быть ниже стартовой ({StartingPrice})");
+
         if (CurrentBid is not null && amount <= CurrentBid.Amount)
             throw new InvalidOperationException($"Ставка должна быть больше текущей ({CurrentBid.Amount})");
 
         var bid = new Bid(playerId, amount, DateTime.UtcNow);
         _bids.Add(bid);
-        CurrentBid = bid;
 
         AddDomainEvent(new BidPlaced(Id, playerId, amount));
     }

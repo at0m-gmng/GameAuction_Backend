@@ -2,26 +2,20 @@
 
 /// <summary>
 /// Статусы жизненного цикла лобби.
+/// Хранится как smallint. Шаг 100 — запас для вставки промежуточных статусов.
+/// Правило: никогда не менять присвоенные значения, только добавлять новые.
 /// </summary>
-public enum LobbyStatus
+public enum LobbyStatus : short
 {
-    /// <summary>
-    /// Лобби открыто для набора игроков.
-    /// </summary>
-    Gathering = 0,
+    /// <summary>Лобби открыто для набора игроков.</summary>
+    Gathering = 100,
 
-    /// <summary>
-    /// Идёт живой аукцион, игроки делают ставки.
-    /// </summary>
-    Bidding = 1,
+    /// <summary>Идёт живой аукцион.</summary>
+    Bidding = 200,
 
-    /// <summary>
-    /// Аукцион завершён, определён победитель.
-    /// </summary>
-    Completed = 2,
+    /// <summary>Аукцион завершён.</summary>
+    Completed = 300,
 
-    /// <summary>
-    /// Лобби отменено (недостаточно игроков или другая причина).
-    /// </summary>
-    Cancelled = 3
+    /// <summary>Лобби отменено.</summary>
+    Cancelled = 400
 }
