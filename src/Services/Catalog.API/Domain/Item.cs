@@ -20,6 +20,21 @@ public sealed class Item : AggregateRoot
     public string? Description { get; private set; }
 
     /// <summary>
+    /// Категория предмета (оружие, броня, техника).
+    /// </summary>
+    public ItemCategory Category { get; private set; }
+
+    /// <summary>
+    /// Редкость предмета (обычный, редкий, эпический, легендарный).
+    /// </summary>
+    public ItemRarity Rarity { get; private set; }
+
+    /// <summary>
+    /// Ссылка на изображение предмета для витрины каталога.
+    /// </summary>
+    public string? ImageUrl { get; private set; }
+
+    /// <summary>
     /// Начальная цена для аукциона (минимальная ставка).
     /// </summary>
     public decimal StartingPrice { get; private set; }
@@ -34,13 +49,26 @@ public sealed class Item : AggregateRoot
     /// </summary>
     /// <param name="name">Название предмета.</param>
     /// <param name="description">Описание предмета.</param>
+    /// <param name="category">Категория предмета.</param>
+    /// <param name="rarity">Редкость предмета.</param>
+    /// <param name="imageUrl">Ссылка на изображение.</param>
     /// <param name="startingPrice">Начальная цена (не может быть отрицательной).</param>
     /// <param name="stock">Начальный остаток (не может быть отрицательным).</param>
-    private Item(string name, string? description, decimal startingPrice, int stock)
+    private Item(
+        string name,
+        string? description,
+        ItemCategory category,
+        ItemRarity rarity,
+        string? imageUrl,
+        decimal startingPrice,
+        int stock)
         : base(Guid.NewGuid())
     {
         Name = name;
         Description = description;
+        Category = category;
+        Rarity = rarity;
+        ImageUrl = imageUrl;
         StartingPrice = startingPrice;
         Stock = stock;
 
@@ -60,12 +88,22 @@ public sealed class Item : AggregateRoot
     /// </summary>
     /// <param name="name">Название предмета.</param>
     /// <param name="description">Описание предмета.</param>
+    /// <param name="category">Категория предмета.</param>
+    /// <param name="rarity">Редкость предмета.</param>
+    /// <param name="imageUrl">Ссылка на изображение.</param>
     /// <param name="startingPrice">Начальная цена предмета.</param>
     /// <param name="stock">Начальный остаток.</param>
     /// <returns>Новый экземпляр каталожной карточки предмета.</returns>
     /// <exception cref="ArgumentException">Если название пустое.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Если цена или остаток отрицательные.</exception>
-    public static Item Create(string name, string? description, decimal startingPrice, int stock)
+    public static Item Create(
+        string name,
+        string? description,
+        ItemCategory category,
+        ItemRarity rarity,
+        string? imageUrl,
+        decimal startingPrice,
+        int stock)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Название предмета не может быть пустым", nameof(name));
@@ -76,7 +114,7 @@ public sealed class Item : AggregateRoot
         if (stock < 0)
             throw new ArgumentOutOfRangeException(nameof(stock), "Остаток не может быть отрицательным");
 
-        return new Item(name, description, startingPrice, stock);
+        return new Item(name, description, category, rarity, imageUrl, startingPrice, stock);
     }
 
     /// <summary>
