@@ -3,31 +3,47 @@
 namespace GameBackend.Services.Catalog.API.Application.Interfaces;
 
 /// <summary>
-/// Интерфейс репозитория для работы с аукционными лотами.
-/// Определяет контракт для сохранения и загрузки предметов.
-/// Реализация будет находиться в Infrastructure слое.
+/// Интерфейс репозитория для работы с каталожными карточками предметов.
+/// Определяет контракт для сохранения, загрузки и поиска предметов.
+/// Реализация находится в Infrastructure слое.
 /// </summary>
 public interface IItemRepository
 {
     /// <summary>
-    /// Получает аукционный лот по уникальному идентификатору.
+    /// Получает предмет по уникальному идентификатору.
     /// </summary>
-    /// <param name="id">Уникальный идентификатор лота.</param>
+    /// <param name="id">Уникальный идентификатор предмета.</param>
     /// <param name="cancellationToken">Токен отмены операции.</param>
-    /// <returns>Аукционный лот или null, если не найден.</returns>
+    /// <returns>Предмет или null, если не найден.</returns>
     Task<Item?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Сохраняет аукционный лот в хранилище.
+    /// Получает список предметов с фильтрацией и пагинацией.
     /// </summary>
-    /// <param name="item">Аукционный лот для сохранения.</param>
+    /// <param name="category">Категория предмета. Null означает все категории.</param>
+    /// <param name="minimumRarity">Минимальная редкость предмета. Null означает любую редкость.</param>
+    /// <param name="skip">Количество элементов, которые нужно пропустить.</param>
+    /// <param name="take">Количество элементов, которые нужно получить.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Коллекция предметов, подходящих под фильтр.</returns>
+    Task<IReadOnlyCollection<Item>> GetListAsync(
+        ItemCategory? category,
+        ItemRarity? minimumRarity,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Сохраняет предмет в хранилище.
+    /// </summary>
+    /// <param name="item">Предмет для сохранения.</param>
     /// <param name="cancellationToken">Токен отмены операции.</param>
     Task SaveAsync(Item item, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Удаляет аукционный лот из хранилища.
+    /// Удаляет предмет из хранилища.
     /// </summary>
-    /// <param name="item">Аукционный лот для удаления.</param>
+    /// <param name="item">Предмет для удаления.</param>
     /// <param name="cancellationToken">Токен отмены операции.</param>
     Task DeleteAsync(Item item, CancellationToken cancellationToken = default);
 }
