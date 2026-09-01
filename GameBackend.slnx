@@ -3,7 +3,7 @@
   <Folder Name="/src/Services/">
     <Project Path="src/Services/Catalog.API/Catalog.API.csproj" />
     <Project Path="src/Services/Identity.API/Identity.API.csproj" />
-    <Project Path="src/Services/Ordering.API/Ordering.API.csproj" />
+    <Project Path="src/Services/Lobby.API/Lobby.API.csproj" />
   </Folder>
   <Folder Name="/src/Shared/">
     <Project Path="src/Shared/SharedKernel/SharedKernel.csproj" />
@@ -11,6 +11,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Catalog.API.Tests/Catalog.API.Tests.csproj" />
     <Project Path="tests/Identity.API.Tests/Identity.API.Tests.csproj" />
-    <Project Path="tests/Ordering.API.Tests/Ordering.API.Tests.csproj" />
+    <Project Path="tests/Lobby.API.Tests/Lobby.API.Tests.csproj" />
   </Folder>
 </Solution>

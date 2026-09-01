@@ -1,4 +1,4 @@
-﻿namespace Ordering.API.Tests;
+﻿namespace Lobby.API.Tests;
 
 public class UnitTest1
 {
