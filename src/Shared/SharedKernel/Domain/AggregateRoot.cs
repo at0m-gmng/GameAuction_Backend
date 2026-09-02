@@ -44,10 +44,7 @@ public abstract class AggregateRoot : Entity
     }
 
     /// <summary>
-    /// Очищает список доменных событий после их публикации.
+    /// Очищает список доменных событий после их доставки.
     /// </summary>
-    public void ClearDomainEvents()
-    {
-        _domainEvents.Clear();
-    }
+    public void ClearDomainEvents() => _domainEvents.Clear();
 }

@@ -1,24 +1,29 @@
 ﻿using GameBackend.Services.Lobby.API.Application.Interfaces;
 using GameBackend.Services.Lobby.API.Domain;
 using GameBackend.Services.Lobby.API.Infrastructure.Persistence;
+using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 
 namespace GameBackend.Services.Lobby.API.Infrastructure.Persistence.Repositories;
 
 /// <summary>
 /// Реализация репозитория лобби на EF Core + PostgreSQL.
+/// После сохранения рассылает доменные события агрегата.
 /// </summary>
 public class LobbyRepository : ILobbyRepository
 {
     private readonly LobbyDbContext _context;
+    private readonly IDomainEventDispatcher _dispatcher;
 
     /// <summary>
-    /// Инициализирует репозиторий с указанным контекстом.
+    /// Инициализирует репозиторий контекстом и диспетчером событий.
     /// </summary>
     /// <param name="context">Контекст базы данных.</param>
-    public LobbyRepository(LobbyDbContext context)
+    /// <param name="dispatcher">Диспетчер доменных событий.</param>
+    public LobbyRepository(LobbyDbContext context, IDomainEventDispatcher dispatcher)
     {
         _context = context;
+        _dispatcher = dispatcher;
     }
 
     /// <summary>
@@ -35,30 +40,37 @@ public class LobbyRepository : ILobbyRepository
     }
 
     /// <summary>
-    /// Получает открытые лобби (статус Gathering).
+    /// Получает открытые лобби (Gathering и Bidding).
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция открытых лобби.</returns>
     public async Task<IReadOnlyCollection<Lobby>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Lobbies
-            .Where(x => x.Status == LobbyStatus.Gathering)
+            .Where(x => x.Status == LobbyStatus.Gathering || x.Status == LobbyStatus.Bidding)
             .OrderBy(x => x.EndsAt)
             .ToListAsync(cancellationToken);
     }
 
     /// <summary>
-    /// Сохраняет лобби. Если оно ещё не отслеживается — добавляет.
+    /// Сохраняет лобби и рассылает накопленные доменные события.
     /// </summary>
     /// <param name="lobby">Лобби для сохранения.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     public async Task SaveAsync(Lobby lobby, CancellationToken cancellationToken = default)
     {
-        // Если лобби уже загружено и отслеживается, EF сам применит изменения.
-        // Добавляем только новые (detached) агрегаты.
         if (_context.Entry(lobby).State == EntityState.Detached)
             _context.Lobbies.Add(lobby);
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        var events = lobby.DomainEvents.ToArray();
+        if (events.Length == 0)
+            return;
+
+        // События рассылаются ТОЛЬКО после успешного сохранения:
+        // клиенты не должны получать факт, который не заперсистился.
+        lobby.ClearDomainEvents();
+        await _dispatcher.DispatchAsync(events, cancellationToken);
     }
 }
