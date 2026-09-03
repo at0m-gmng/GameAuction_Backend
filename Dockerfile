@@ -6,5 +6,4 @@ RUN dotnet publish src/Services/Identity.API/Identity.API.csproj -c Release -o /
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app .
-EXPOSE 8080
-ENTRYPOINT ["dotnet", "Identity.API.dll"]
+CMD ASPNETCORE_URLS=http://0.0.0.0:$PORT dotnet Identity.API.dll
