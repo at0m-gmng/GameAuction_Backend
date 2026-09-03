@@ -13,6 +13,19 @@
 - **Функции**: Регистрация, вход, выдача JWT-токенов, управление сессиями
 - **Технологии**: ASP.NET Core, JWT Bearer Authentication
 
+## Локальный запуск Identity.API
+
+Секреты не хранятся в репозитории. После клонирования выполни:
+
+# Сгенерировать 32 случайных байта в base64 (это хороший секрет)
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+
+dotnet user-secrets init --project src/Services/Identity.API/Identity.API.csproj
+dotnet user-secrets set "Jwt:SecretKey" "<значение из командного vault/менеджера паролей>"
+
+Требуемые секреты:
+- Jwt:SecretKey — строка от 32 символов для HMAC-SHA256
+
 #### Catalog.API
 - **Назначение**: Управление каталогом товаров/предметов
 - **Функции**: Просмотр списка товаров, поиск, фильтрация, получение деталей
