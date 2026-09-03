@@ -16,9 +16,15 @@ public sealed class Player : AggregateRoot
     public string Nickname { get; private set; } = default!;
 
     /// <summary>
-    /// Email игрока, используется для входа.
+    /// Email игрока в оригинальном написании (для отображения).
     /// </summary>
     public string Email { get; private set; } = default!;
+
+    /// <summary>
+    /// Нормализованный email (lowercase) для поиска и уникальности.
+    /// Позволяет aBc@gmail.com и ABC@gmail.com быть одним игроком.
+    /// </summary>
+    public string NormalizedEmail { get; private set; } = default!;
 
     /// <summary>
     /// Хеш пароля игрока. Сам пароль никогда не хранится.
@@ -44,13 +50,14 @@ public sealed class Player : AggregateRoot
     /// Инициализирует нового игрока.
     /// </summary>
     /// <param name="nickname">Отображаемое имя.</param>
-    /// <param name="email">Email для входа.</param>
+    /// <param name="email">Email в оригинальном написании.</param>
     /// <param name="passwordHash">Хеш пароля.</param>
     private Player(string nickname, string email, string passwordHash)
         : base(Guid.NewGuid())
     {
         Nickname = nickname;
         Email = email;
+        NormalizedEmail = email.ToLowerInvariant();
         PasswordHash = passwordHash;
         Balance = GoldCredits.Zero;
     }
@@ -66,7 +73,7 @@ public sealed class Player : AggregateRoot
     /// Фабричный метод регистрации нового игрока.
     /// </summary>
     /// <param name="nickname">Отображаемое имя.</param>
-    /// <param name="email">Email для входа.</param>
+    /// <param name="email">Email в оригинальном написании.</param>
     /// <param name="passwordHash">Хеш пароля (уже вычисленный).</param>
     /// <returns>Новый экземпляр игрока.</returns>
     /// <exception cref="ArgumentException">Если любое из полей пустое.</exception>
