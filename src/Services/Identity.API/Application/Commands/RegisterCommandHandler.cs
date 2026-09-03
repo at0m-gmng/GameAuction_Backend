@@ -35,13 +35,14 @@ public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand, st
     /// <returns>JWT-токен.</returns>
     public async Task<string> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
-        var existing = await _repository.GetByEmailAsync(command.Email, cancellationToken);
+        var normalizedEmail = command.Email.ToLowerInvariant();
+
+        var existing = await _repository.GetByNormalizedEmailAsync(normalizedEmail, cancellationToken);
         if (existing is not null)
             throw new InvalidOperationException("Игрок с таким email уже зарегистрирован");
 
         var passwordHash = _hasher.Hash(command.Password);
 
-        // TODO(domain): вынести passwordHash в доменную модель Player, когда добавим поле.
         var player = Player.Register(command.Nickname, command.Email, passwordHash);
 
         await _repository.SaveAsync(player, cancellationToken);

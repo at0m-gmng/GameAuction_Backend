@@ -37,6 +37,11 @@ public sealed class Player : AggregateRoot
     public GoldCredits Balance { get; private set; } = GoldCredits.Zero;
 
     /// <summary>
+    /// Дата и время регистрации игрока (UTC).
+    /// </summary>
+    public DateTime CreatedAt { get; private set; }
+
+    /// <summary>
     /// Список ID предметов, выигранных игроком.
     /// </summary>
     private readonly List<Guid> _inventory = new();
@@ -60,6 +65,7 @@ public sealed class Player : AggregateRoot
         NormalizedEmail = email.ToLowerInvariant();
         PasswordHash = passwordHash;
         Balance = GoldCredits.Zero;
+        CreatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
