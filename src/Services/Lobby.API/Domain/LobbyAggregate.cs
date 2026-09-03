@@ -8,7 +8,7 @@ namespace GameBackend.Services.Lobby.API.Domain;
 /// и проходит живой аукцион за предмет. Объединяет матчмейкинг и аукцион в единый поток.
 /// Хранит денормализованный снапшот витринных данных предмета для быстрых чтений.
 /// </summary>
-public sealed class Lobby : AggregateRoot
+public sealed class LobbyAggregate : AggregateRoot
 {
     /// <summary>
     /// Идентификатор предмета из каталога, который разыгрывается в этом лобби.
@@ -79,7 +79,7 @@ public sealed class Lobby : AggregateRoot
     /// <summary>
     /// Инициализирует новое лобби. Используйте фабричный метод Create.
     /// </summary>
-    private Lobby(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
+    private LobbyAggregate(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
         : base(Guid.NewGuid())
     {
         ItemId = itemId;
@@ -95,7 +95,7 @@ public sealed class Lobby : AggregateRoot
     /// <summary>
     /// Приватный конструктор для поддержки ORM.
     /// </summary>
-    private Lobby()
+    private LobbyAggregate()
     {
     }
 
@@ -109,12 +109,12 @@ public sealed class Lobby : AggregateRoot
     /// <param name="maxParticipants">Максимальное количество участников.</param>
     /// <returns>Новое лобби в статусе Gathering.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Если maxParticipants меньше 2.</exception>
-    public static Lobby Create(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
+    public static LobbyAggregate Create(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
     {
         if (maxParticipants < 2)
             throw new ArgumentOutOfRangeException(nameof(maxParticipants), "Минимум 2 участника для аукциона");
 
-        return new Lobby(itemId, itemName, itemImageUrl, startingPrice, maxParticipants);
+        return new LobbyAggregate(itemId, itemName, itemImageUrl, startingPrice, maxParticipants);
     }
 
     /// <summary>
