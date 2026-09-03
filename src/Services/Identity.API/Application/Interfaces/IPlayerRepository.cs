@@ -8,12 +8,12 @@ namespace GameBackend.Services.Identity.API.Application.Interfaces;
 public interface IPlayerRepository
 {
     /// <summary>
-    /// Находит игрока по email.
+    /// Находит игрока по нормализованному email (lowercase).
     /// </summary>
-    /// <param name="email">Email для поиска.</param>
+    /// <param name="normalizedEmail">Нормализованный email.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Игрок или null.</returns>
-    Task<Player?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<Player?> GetByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Сохраняет нового игрока.

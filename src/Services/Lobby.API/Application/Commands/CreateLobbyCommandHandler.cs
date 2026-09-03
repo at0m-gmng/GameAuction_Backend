@@ -28,7 +28,7 @@ public sealed class CreateLobbyCommandHandler : ICommandHandler<CreateLobbyComma
     /// <returns>Идентификатор созданного лобби.</returns>
     public async Task<Guid> Handle(CreateLobbyCommand command, CancellationToken cancellationToken)
     {
-        var lobby = Lobby.Create(
+        var lobby = LobbyAggregate.Create(
             command.ItemId,
             command.ItemName,
             command.ItemImageUrl,
