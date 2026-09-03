@@ -32,7 +32,7 @@ public sealed class GetOpenLobbiesQueryHandler : IQueryHandler<GetOpenLobbiesQue
         return lobbies.Select(ToListDto).ToArray();
     }
 
-    private static LobbyListDto ToListDto(Lobby lobby) => new(
+    private static LobbyListDto ToListDto(LobbyAggregate lobby) => new(
         lobby.Id,
         lobby.ItemId,
         lobby.ItemName,
