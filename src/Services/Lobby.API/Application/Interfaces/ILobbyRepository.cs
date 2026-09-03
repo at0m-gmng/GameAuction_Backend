@@ -13,19 +13,19 @@ public interface ILobbyRepository
     /// <param name="id">Идентификатор лобби.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Лобби или null.</returns>
-    Task<Lobby?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<LobbyAggregate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получает открытые лобби (Gathering и Bidding).
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция открытых лобби.</returns>
-    Task<IReadOnlyCollection<Lobby>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Сохраняет лобби.
     /// </summary>
     /// <param name="lobby">Лобби для сохранения.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
-    Task SaveAsync(Lobby lobby, CancellationToken cancellationToken = default);
+    Task SaveAsync(LobbyAggregate lobby, CancellationToken cancellationToken = default);
 }
