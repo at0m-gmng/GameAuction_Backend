@@ -8,11 +8,22 @@ using GameBackend.Services.Lobby.API.Infrastructure.Persistence.Repositories;
 using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 
+const string FrontendCorsPolicy = "Frontend";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy => policy
+        .WithOrigins("https://at0m-gmng.github.io")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());
+});
 
 builder.Services.AddDbContext<LobbyDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("LobbyDb"),
@@ -40,6 +51,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(FrontendCorsPolicy);
 app.MapControllers();
 app.MapHub<LobbyHub>("/hubs/lobby");
 

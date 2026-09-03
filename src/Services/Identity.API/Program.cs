@@ -7,10 +7,20 @@ using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+const string FrontendCorsPolicy = "Frontend";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy => policy
+        .WithOrigins("https://at0m-gmng.github.io")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
 
 builder.Services.AddDbContext<IdentityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("IdentityDb"),
@@ -38,6 +48,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(FrontendCorsPolicy);
 app.MapControllers();
 
 using (var scope = app.Services.CreateScope())

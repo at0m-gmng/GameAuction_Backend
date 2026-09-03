@@ -5,10 +5,20 @@ using GameBackend.Services.Catalog.API.Infrastructure.Persistence;
 using GameBackend.Services.Catalog.API.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 
+const string FrontendCorsPolicy = "Frontend";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy => policy
+        .WithOrigins("https://at0m-gmng.github.io")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
 
 builder.Services.AddDbContext<CatalogDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("CatalogDb"),
@@ -35,6 +45,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(FrontendCorsPolicy);
 app.MapControllers();
 
 app.Run();
