@@ -1,7 +1,9 @@
+using GameBackend.Services.Identity.API.Application.Commands;
 using GameBackend.Services.Identity.API.Application.Interfaces;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence.Repositories;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
+using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -24,6 +26,9 @@ builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
 
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
+
+builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
 
 var app = builder.Build();
 
