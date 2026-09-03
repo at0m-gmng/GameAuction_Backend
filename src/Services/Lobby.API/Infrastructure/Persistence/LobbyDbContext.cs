@@ -20,7 +20,7 @@ public class LobbyDbContext : DbContext
     /// <summary>
     /// Таблица лобби.
     /// </summary>
-    public DbSet<Lobby> Lobbies => Set<Lobby>();
+    public DbSet<LobbyAggregate> Lobbies => Set<LobbyAggregate>();
 
     /// <summary>
     /// Применяет конфигурации маппинга из сборки.

@@ -1,6 +1,5 @@
 ﻿using GameBackend.Services.Lobby.API.Application.Interfaces;
 using GameBackend.Services.Lobby.API.Domain;
-using GameBackend.Services.Lobby.API.Infrastructure.Persistence;
 using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,7 +31,7 @@ public class LobbyRepository : ILobbyRepository
     /// <param name="id">Идентификатор лобби.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Лобби или null.</returns>
-    public async Task<Lobby?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<LobbyAggregate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.Lobbies
             .Include(x => x.Bids)
@@ -44,7 +43,7 @@ public class LobbyRepository : ILobbyRepository
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция открытых лобби.</returns>
-    public async Task<IReadOnlyCollection<Lobby>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Lobbies
             .Where(x => x.Status == LobbyStatus.Gathering || x.Status == LobbyStatus.Bidding)
@@ -57,7 +56,7 @@ public class LobbyRepository : ILobbyRepository
     /// </summary>
     /// <param name="lobby">Лобби для сохранения.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
-    public async Task SaveAsync(Lobby lobby, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(LobbyAggregate lobby, CancellationToken cancellationToken = default)
     {
         if (_context.Entry(lobby).State == EntityState.Detached)
             _context.Lobbies.Add(lobby);

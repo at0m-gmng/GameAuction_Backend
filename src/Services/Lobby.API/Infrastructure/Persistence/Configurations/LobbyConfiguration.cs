@@ -7,7 +7,7 @@ namespace GameBackend.Services.Lobby.API.Infrastructure.Persistence.Configuratio
 /// <summary>
 /// Конфигурация маппинга агрегата Lobby на таблицу Lobbies.
 /// </summary>
-public class LobbyConfiguration : IEntityTypeConfiguration<Lobby>
+public class LobbyConfiguration : IEntityTypeConfiguration<LobbyAggregate>
 {
     private const int ItemNameMaxLength = 200;
     private const int ImageUrlMaxLength = 2000;
@@ -18,7 +18,7 @@ public class LobbyConfiguration : IEntityTypeConfiguration<Lobby>
     /// Настраивает маппинг агрегата Lobby.
     /// </summary>
     /// <param name="builder">Построитель сущности.</param>
-    public void Configure(EntityTypeBuilder<Lobby> builder)
+    public void Configure(EntityTypeBuilder<LobbyAggregate> builder)
     {
         builder.ToTable("Lobbies");
 
