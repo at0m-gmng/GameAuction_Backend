@@ -72,17 +72,22 @@ if (jwtSettings is not null)
     jwtSettings.Issuer = string.IsNullOrWhiteSpace(jwtSettings.Issuer) ? "game-backend" : jwtSettings.Issuer;
     jwtSettings.Audience = string.IsNullOrWhiteSpace(jwtSettings.Audience) ? "game-backend-clients" : jwtSettings.Audience;
 
-    // SecretKey has no safe default — a signing key can't be guessed. Fail loudly
-    // at startup rather than hitting a NullReference deep inside GetBytes on the
-    // first request (this also resolves the CS8604 nullable warning cleanly).
+    // SecretKey has no safe default — a signing key can't be guessed. Validate it
+    // at startup so a misconfigured environment fails loudly and clearly, instead
+    // of either NullReference-ing or throwing the cryptic runtime IDX10720 ("key
+    // size must be greater than 256 bits") on the first registration. HS256
+    // requires a key of at least 256 bits / 32 bytes.
+    const int HmacSha256MinKeyBytes = 32;
     if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey))
         throw new InvalidOperationException("Jwt:SecretKey is not configured — set Jwt__SecretKey on the deployed environment.");
+    var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.SecretKey);
+    if (keyBytes.Length < HmacSha256MinKeyBytes)
+        throw new InvalidOperationException(
+            $"Jwt:SecretKey is too short for HS256: {keyBytes.Length} bytes, need at least {HmacSha256MinKeyBytes}. Set a longer Jwt__SecretKey.");
 
     Console.WriteLine($"JWT-DIAG after-normalize: Issuer='{jwtSettings.Issuer}' Audience='{jwtSettings.Audience}' SecretKeyLen={jwtSettings.SecretKey.Length}");
 
-    // Captured into a local after the guard above so nullable flow analysis knows
-    // it's non-null (the property-access form left a CS8604 warning at GetBytes).
-    var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey));
+    var signingKey = new SymmetricSecurityKey(keyBytes);
 
     builder.Services.AddSingleton(jwtSettings);
 

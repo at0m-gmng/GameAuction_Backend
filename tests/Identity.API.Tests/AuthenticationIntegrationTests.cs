@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Identity.API.Tests;
@@ -35,6 +36,20 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
         // ASPNETCORE_ENVIRONMENT in CI, so a 500 comes back with the real exception
         // message/stack in the body instead of an empty Production-mode response.
         builder.UseEnvironment("Development");
+
+        // appsettings.json only ships a placeholder SecretKey ("SET_VIA_USER_
+        // SECRETS_OR_ENV", 216 bits) — in production the real key comes from the
+        // Jwt__SecretKey env var. That placeholder is too short for HS256 (needs
+        // >=256 bits), so tests must supply a valid key of their own. Issuer and
+        // Audience are deliberately left to bind from appsettings.json so this
+        // test still exercises the real config path.
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:SecretKey"] = "integration-test-signing-key-that-is-long-enough-for-hs256",
+            });
+        });
 
         _connection.Open();
 
