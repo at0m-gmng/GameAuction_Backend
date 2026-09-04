@@ -18,6 +18,14 @@ public interface IItemRepository
     Task<Item?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Получает предметы по списку идентификаторов.
+    /// </summary>
+    /// <param name="ids">Идентификаторы предметов.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Коллекция найденных предметов.</returns>
+    Task<IReadOnlyCollection<Item>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Получает список предметов с фильтрацией и пагинацией.
     /// </summary>
     /// <param name="category">Категория предмета. Null означает все категории.</param>

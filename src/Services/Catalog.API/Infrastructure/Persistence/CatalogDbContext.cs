@@ -23,6 +23,11 @@ public class CatalogDbContext : DbContext
     public DbSet<Item> Items => Set<Item>();
 
     /// <summary>
+    /// Таблица позиций инвентаря игроков.
+    /// </summary>
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+
+    /// <summary>
     /// Применяет все конфигурации маппинга из этой сборки.
     /// </summary>
     /// <param name="modelBuilder">Построитель модели.</param>

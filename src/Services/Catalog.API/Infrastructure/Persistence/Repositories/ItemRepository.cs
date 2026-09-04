@@ -35,6 +35,12 @@ public class ItemRepository : IItemRepository
         return await _context.Items.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<Item>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        return await _context.Items.Where(x => idList.Contains(x.Id)).ToListAsync(cancellationToken);
+    }
+
     /// <summary>
     /// Получает список предметов с фильтрацией и пагинацией.
     /// </summary>
