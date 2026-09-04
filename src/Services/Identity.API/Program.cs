@@ -58,6 +58,13 @@ if (jwtSettings is not null)
     })
     .AddJwtBearer(options =>
     {
+        // JwtBearerOptions.Audience (not just TokenValidationParameters.
+        // ValidAudience) has to be set explicitly — per IDX10208 seen in
+        // Render logs, a freshly-constructed TokenValidationParameters
+        // object's ValidAudience wasn't being picked up by the framework's
+        // own post-configure step, so validation saw it as null regardless
+        // of what was assigned here.
+        options.Audience = jwtSettings.Audience;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
