@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Identity.API.Tests;
@@ -24,11 +23,26 @@ namespace Identity.API.Tests;
 // integration tests for exactly this reason.
 public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
 {
+    // appsettings.json only ships a placeholder SecretKey ("SET_VIA_USER_SECRETS_
+    // OR_ENV", 216 bits) — in production the real key comes from the Jwt__SecretKey
+    // env var. That placeholder is too short for HS256 (needs >=256 bits), so tests
+    // must supply a valid key. It has to come from an environment variable, not
+    // ConfigureAppConfiguration: Program.cs reads GetSection("Jwt") at the builder
+    // stage (before app.Build()), whereas the factory's ConfigureAppConfiguration
+    // sources aren't applied until Build() — too late. Env vars, by contrast, are
+    // picked up by WebApplication.CreateBuilder immediately, exactly like on Render.
+    private const string TestSecretKey = "integration-test-signing-key-that-is-long-enough-for-hs256";
+
     // A SQLite in-memory database lives only as long as its connection is open,
     // so the connection has to be held open for the whole factory lifetime rather
     // than let EF open/close it per operation (which would wipe the schema created
     // by EnsureCreated() at startup before the first request ever runs).
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
+    public AuthenticationIntegrationTests()
+    {
+        Environment.SetEnvironmentVariable("Jwt__SecretKey", TestSecretKey);
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -36,20 +50,6 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
         // ASPNETCORE_ENVIRONMENT in CI, so a 500 comes back with the real exception
         // message/stack in the body instead of an empty Production-mode response.
         builder.UseEnvironment("Development");
-
-        // appsettings.json only ships a placeholder SecretKey ("SET_VIA_USER_
-        // SECRETS_OR_ENV", 216 bits) — in production the real key comes from the
-        // Jwt__SecretKey env var. That placeholder is too short for HS256 (needs
-        // >=256 bits), so tests must supply a valid key of their own. Issuer and
-        // Audience are deliberately left to bind from appsettings.json so this
-        // test still exercises the real config path.
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Jwt:SecretKey"] = "integration-test-signing-key-that-is-long-enough-for-hs256",
-            });
-        });
 
         _connection.Open();
 
@@ -82,7 +82,11 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
         if (disposing)
+        {
             _connection.Dispose();
+            // Env vars are process-global; clear it so it can't leak into other tests.
+            Environment.SetEnvironmentVariable("Jwt__SecretKey", null);
+        }
     }
 
     [Fact]
