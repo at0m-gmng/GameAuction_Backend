@@ -23,16 +23,12 @@ public class JwtTokenGeneratorTests
         var token = CreateGenerator(settings).Generate(playerId);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
-        // Ровно та регрессия, что однажды уже уехала в прод: токен выпускался
-        // без исключения, но без iss/aud — и любой вызов [Authorize]-эндпоинта
-        // возвращал 401, каким бы свежим ни был токен.
+        // Регрессия, что уже уезжала в прод: токен без iss/aud → любой [Authorize] даёт 401.
         Assert.Equal("game-backend", jwt.Issuer);
         Assert.Contains("game-backend-clients", jwt.Audiences);
         Assert.Equal(playerId.ToString(), jwt.Subject);
 
-        // Вторая регрессия, найденная сразу за первой: "aud" добавлялся и
-        // параметром конструктора, и явным claim'ом, что давало дублированный
-        // массив аудитории, который валидация отвергает так же, как и пустой.
+        // И вторая: дублированный "aud" (claim + параметр конструктора) валидация тоже отвергает.
         Assert.Single(jwt.Audiences);
     }
 }

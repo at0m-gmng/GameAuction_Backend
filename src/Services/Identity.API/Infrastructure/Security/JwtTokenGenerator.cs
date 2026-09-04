@@ -30,15 +30,12 @@ public sealed class JwtTokenGenerator
     /// <returns>JWT-токен в виде строки.</returns>
     public string Generate(Guid playerId)
     {
-        // Настройки уже провалидированы при старте (см. JwtAuthenticationExtensions),
-        // поэтому здесь генератор им доверяет и просто выпускает токен.
+        // Настройки провалидированы на старте (Program.cs) — генератор им доверяет.
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // iss/aud выставляются параметрами конструктора JwtSecurityToken ниже —
-        // он сам кладёт их в payload. Не добавляем их ещё и явными claim'ами:
-        // это давало дублированный массив "aud", который валидация отвергает так
-        // же жёстко, как и полное отсутствие аудитории.
+        // iss/aud задаёт конструктор JwtSecurityToken ниже; вторым разом через явные
+        // claim'ы их не дублируем — иначе получается отвергаемый массив "aud".
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, playerId.ToString()),

@@ -40,15 +40,12 @@ builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
 
-// JWT: настройки читаются один раз и используются и для выпуска токенов
-// (JwtTokenGenerator), и для их валидации ниже — из одного экземпляра, чтобы
-// issuer/audience/ключ не могли разойтись.
+// Один экземпляр настроек на выпуск и валидацию — чтобы issuer/audience/ключ не разошлись.
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException(
         $"Конфигурация JWT отсутствует: секция '{JwtSettings.SectionName}' не найдена.");
 
-// Проверяем конфиг на старте, чтобы кривой деплой падал сразу и с понятным
-// сообщением, а не отвечал молчаливым 401 на каждый запрос.
+// Fail-fast на старте: кривой конфиг падает сразу, а не молчаливым 401 на каждый запрос.
 if (string.IsNullOrWhiteSpace(jwtSettings.Issuer))
     throw new InvalidOperationException("Jwt:Issuer не задан.");
 if (string.IsNullOrWhiteSpace(jwtSettings.Audience))
