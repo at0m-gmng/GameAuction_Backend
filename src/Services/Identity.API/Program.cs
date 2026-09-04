@@ -3,6 +3,7 @@ using GameBackend.Services.Identity.API.Application.Interfaces;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence.Repositories;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
+using GameBackend.SharedKernel.Security;
 using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

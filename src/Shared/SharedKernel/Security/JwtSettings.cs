@@ -1,4 +1,4 @@
-namespace GameBackend.Services.Identity.API.Infrastructure.Security;
+namespace GameBackend.SharedKernel.Security;
 
 /// <summary>
 /// Настройки выпуска JWT-токенов.

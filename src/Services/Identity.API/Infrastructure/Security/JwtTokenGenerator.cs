@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using GameBackend.SharedKernel.Security;
 
 namespace GameBackend.Services.Identity.API.Infrastructure.Security;
 

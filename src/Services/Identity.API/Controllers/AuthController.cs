@@ -39,9 +39,16 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
     {
-        var command = new RegisterCommand(request.Nickname, request.Email, request.Password);
-        var token = await _registerHandler.Handle(command, cancellationToken);
-        return Ok(new AuthResponse(token));
+        try
+        {
+            var command = new RegisterCommand(request.Nickname, request.Email, request.Password);
+            var token = await _registerHandler.Handle(command, cancellationToken);
+            return Ok(new AuthResponse(token));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -55,8 +62,15 @@ public class AuthController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
-        var command = new LoginCommand(request.Email, request.Password);
-        var token = await _loginHandler.Handle(command, cancellationToken);
-        return Ok(new AuthResponse(token));
+        try
+        {
+            var command = new LoginCommand(request.Email, request.Password);
+            var token = await _loginHandler.Handle(command, cancellationToken);
+            return Ok(new AuthResponse(token));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }
