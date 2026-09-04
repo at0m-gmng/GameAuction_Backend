@@ -3,13 +3,8 @@ using GameBackend.Services.Identity.API.Application.Interfaces;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence.Repositories;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
-using GameBackend.SharedKernel.Security;
 using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using System.Text;
 
 const string FrontendCorsPolicy = "Frontend";
 
@@ -34,121 +29,11 @@ builder.Services.AddDbContext<IdentityDbContext>(options =>
             errorCodesToAdd: null)));
 
 builder.Services.AddSingleton<PasswordHasher>();
-builder.Services.AddSingleton<JwtTokenGenerator>();
-
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
-
 builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
 
-// Bound exactly once and reused as the same instance for both token
-// generation (JwtTokenGenerator, via DI below) and validation (below) —
-// previously these were two independent bindings (Configure<JwtSettings> +
-// IOptions vs a raw .Get<JwtSettings>() call) that could silently diverge,
-// which is exactly what happened: generation saw a populated Audience,
-// validation saw an empty one, and every token was rejected as a result.
-var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
-
-// TEMPORARY DIAGNOSTICS for the IDX10208 investigation — remove once the
-// root cause is confirmed. Printed with Console.WriteLine (not ILogger,
-// since no DI/logging pipeline exists yet at this point) so it's guaranteed
-// to show up in Render's stdout log stream. Prefixed "JWT-DIAG" for easy
-// filtering via list_logs text search.
-Console.WriteLine(jwtSettings is null
-    ? "JWT-DIAG startup: GetSection(\"Jwt\").Get<JwtSettings>() returned NULL — the Jwt config section is missing entirely."
-    : $"JWT-DIAG startup: Environment={builder.Environment.EnvironmentName} Issuer='{jwtSettings.Issuer}' Audience='{jwtSettings.Audience}' SecretKeyLen={jwtSettings.SecretKey?.Length ?? -1} ExpiryMinutes={jwtSettings.ExpiryMinutes}");
-
-if (jwtSettings is not null)
-{
-    // THE ACTUAL ROOT CAUSE of the IDX10208 loop: the token generator falls
-    // back to these defaults when config arrives empty (see JwtTokenGenerator),
-    // but validation below read jwtSettings.Audience raw. So when Audience was
-    // empty at runtime, generation still stamped a correct "game-backend-clients"
-    // aud onto the token (via its fallback) while validation set ValidAudience
-    // to "" — hence a perfect-looking token rejected with "ValidAudience is null
-    // or whitespace". Applying the same fallbacks here, once, makes the two sides
-    // physically incapable of disagreeing. The generator's own fallback then
-    // becomes redundant but harmless.
-    jwtSettings.Issuer = string.IsNullOrWhiteSpace(jwtSettings.Issuer) ? "game-backend" : jwtSettings.Issuer;
-    jwtSettings.Audience = string.IsNullOrWhiteSpace(jwtSettings.Audience) ? "game-backend-clients" : jwtSettings.Audience;
-
-    // SecretKey has no safe default — a signing key can't be guessed. Validate it
-    // at startup so a misconfigured environment fails loudly and clearly, instead
-    // of either NullReference-ing or throwing the cryptic runtime IDX10720 ("key
-    // size must be greater than 256 bits") on the first registration. HS256
-    // requires a key of at least 256 bits / 32 bytes.
-    const int HmacSha256MinKeyBytes = 32;
-    if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey))
-        throw new InvalidOperationException("Jwt:SecretKey is not configured — set Jwt__SecretKey on the deployed environment.");
-    var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.SecretKey);
-    if (keyBytes.Length < HmacSha256MinKeyBytes)
-        throw new InvalidOperationException(
-            $"Jwt:SecretKey is too short for HS256: {keyBytes.Length} bytes, need at least {HmacSha256MinKeyBytes}. Set a longer Jwt__SecretKey.");
-
-    Console.WriteLine($"JWT-DIAG after-normalize: Issuer='{jwtSettings.Issuer}' Audience='{jwtSettings.Audience}' SecretKeyLen={jwtSettings.SecretKey.Length}");
-
-    var signingKey = new SymmetricSecurityKey(keyBytes);
-
-    builder.Services.AddSingleton(jwtSettings);
-
-    builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.Audience = jwtSettings.Audience;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = signingKey,
-            ClockSkew = TimeSpan.Zero
-        };
-
-        // Confirms this closure actually ran (and with what values) — if this
-        // line never appears in logs, IOptionsFactory never invoked our
-        // configure delegate at all, which would point at a completely
-        // different problem than a bad Issuer/Audience value.
-        Console.WriteLine($"JWT-DIAG AddJwtBearer configure ran: ValidIssuer='{options.TokenValidationParameters.ValidIssuer}' ValidAudience='{options.TokenValidationParameters.ValidAudience}' Options.Audience='{options.Audience}'");
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                Console.WriteLine($"JWT-DIAG OnMessageReceived: hasToken={!string.IsNullOrEmpty(context.Token)} len={context.Token?.Length ?? 0}");
-                return Task.CompletedTask;
-            },
-            OnTokenValidated = context =>
-            {
-                Console.WriteLine($"JWT-DIAG OnTokenValidated: sub={context.Principal?.FindFirst("sub")?.Value}");
-                return Task.CompletedTask;
-            },
-            OnAuthenticationFailed = context =>
-            {
-                var tvp = context.Options.TokenValidationParameters;
-                Console.WriteLine(
-                    $"JWT-DIAG OnAuthenticationFailed: exception={context.Exception.GetType().FullName} message=\"{context.Exception.Message}\" " +
-                    $"live.ValidIssuer='{tvp.ValidIssuer}' live.ValidAudience='{tvp.ValidAudience}' " +
-                    $"live.ValidIssuersCount={tvp.ValidIssuers?.Count() ?? -1} live.ValidAudiencesCount={tvp.ValidAudiences?.Count() ?? -1} " +
-                    $"live.Options.Audience='{context.Options.Audience}'");
-                return Task.CompletedTask;
-            },
-            OnChallenge = context =>
-            {
-                Console.WriteLine($"JWT-DIAG OnChallenge: error='{context.Error}' description='{context.ErrorDescription}' authFailureMessage='{context.AuthenticateFailure?.Message}'");
-                return Task.CompletedTask;
-            }
-        };
-    });
-
-    builder.Services.AddAuthorization();
-}
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
@@ -171,4 +56,5 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
+// Точка входа делается видимой для WebApplicationFactory<Program> в интеграционных тестах.
 public partial class Program { }
