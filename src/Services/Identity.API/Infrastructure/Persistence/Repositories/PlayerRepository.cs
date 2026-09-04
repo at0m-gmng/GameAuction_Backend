@@ -33,6 +33,10 @@ public class PlayerRepository : IPlayerRepository
             .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<Player?> GetAsync(Guid playerId, CancellationToken cancellationToken = default) 
+        => await _context.Players.FindAsync(new object[] { playerId }, cancellationToken);
+
     /// <summary>
     /// Сохраняет нового игрока.
     /// </summary>

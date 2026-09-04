@@ -16,6 +16,11 @@ public interface IPlayerRepository
     Task<Player?> GetByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Находит игрока по идентификатору.
+    /// </summary>
+    Task<Player?> GetAsync(Guid playerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Сохраняет нового игрока.
     /// </summary>
     /// <param name="player">Игрок для сохранения.</param>
