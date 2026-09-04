@@ -6,7 +6,6 @@ using GameBackend.Services.Identity.API.Infrastructure.Security;
 using GameBackend.SharedKernel.Security;
 using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -33,9 +32,6 @@ builder.Services.AddDbContext<IdentityDbContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(5),
             errorCodesToAdd: null)));
 
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
-builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<JwtSettings>>().Value);
-
 builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
 
@@ -44,9 +40,17 @@ builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
 
+// Bound exactly once and reused as the same instance for both token
+// generation (JwtTokenGenerator, via DI below) and validation (below) —
+// previously these were two independent bindings (Configure<JwtSettings> +
+// IOptions vs a raw .Get<JwtSettings>() call) that could silently diverge,
+// which is exactly what happened: generation saw a populated Audience,
+// validation saw an empty one, and every token was rejected as a result.
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
 if (jwtSettings is not null)
 {
+    builder.Services.AddSingleton(jwtSettings);
+
     builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
