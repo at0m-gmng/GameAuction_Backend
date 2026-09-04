@@ -30,6 +30,12 @@ public class JwtTokenGeneratorTests
         Assert.Equal("game-backend", jwt.Issuer);
         Assert.Contains("game-backend-clients", jwt.Audiences);
         Assert.Equal(playerId.ToString(), jwt.Subject);
+
+        // Second regression, found immediately after fixing the first one:
+        // adding "aud" both via the constructor param AND as an explicit
+        // claim produced a duplicated audience array, which validation
+        // rejected just as hard as having no audience at all.
+        Assert.Single(jwt.Audiences);
     }
 
     [Fact]

@@ -43,16 +43,16 @@ public sealed class JwtTokenGenerator
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // Issuer/audience are added both as constructor params and as explicit
-        // claims below — belt and suspenders, since a prior build silently
-        // produced tokens missing "iss"/"aud", which made every validation
-        // request come back 401 regardless of how fresh the token was.
+        // iss/aud come from the issuer/audience constructor params below —
+        // JwtSecurityToken adds them to the payload itself. Don't also add
+        // them as explicit claims here: that caused a duplicated "aud" array
+        // (["game-backend-clients", "game-backend-clients"]), which made
+        // audience validation reject the token just as badly as having no
+        // audience at all.
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, playerId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iss, issuer),
-            new Claim(JwtRegisteredClaimNames.Aud, audience),
         };
 
         var token = new JwtSecurityToken(
