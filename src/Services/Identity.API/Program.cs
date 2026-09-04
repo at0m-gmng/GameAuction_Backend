@@ -60,6 +60,30 @@ Console.WriteLine(jwtSettings is null
 
 if (jwtSettings is not null)
 {
+    // THE ACTUAL ROOT CAUSE of the IDX10208 loop: the token generator falls
+    // back to these defaults when config arrives empty (see JwtTokenGenerator),
+    // but validation below read jwtSettings.Audience raw. So when Audience was
+    // empty at runtime, generation still stamped a correct "game-backend-clients"
+    // aud onto the token (via its fallback) while validation set ValidAudience
+    // to "" — hence a perfect-looking token rejected with "ValidAudience is null
+    // or whitespace". Applying the same fallbacks here, once, makes the two sides
+    // physically incapable of disagreeing. The generator's own fallback then
+    // becomes redundant but harmless.
+    jwtSettings.Issuer = string.IsNullOrWhiteSpace(jwtSettings.Issuer) ? "game-backend" : jwtSettings.Issuer;
+    jwtSettings.Audience = string.IsNullOrWhiteSpace(jwtSettings.Audience) ? "game-backend-clients" : jwtSettings.Audience;
+
+    // SecretKey has no safe default — a signing key can't be guessed. Fail loudly
+    // at startup rather than hitting a NullReference deep inside GetBytes on the
+    // first request (this also resolves the CS8604 nullable warning cleanly).
+    if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey))
+        throw new InvalidOperationException("Jwt:SecretKey is not configured — set Jwt__SecretKey on the deployed environment.");
+
+    Console.WriteLine($"JWT-DIAG after-normalize: Issuer='{jwtSettings.Issuer}' Audience='{jwtSettings.Audience}' SecretKeyLen={jwtSettings.SecretKey.Length}");
+
+    // Captured into a local after the guard above so nullable flow analysis knows
+    // it's non-null (the property-access form left a CS8604 warning at GetBytes).
+    var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey));
+
     builder.Services.AddSingleton(jwtSettings);
 
     builder.Services.AddAuthentication(options =>
@@ -78,7 +102,7 @@ if (jwtSettings is not null)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings.Issuer,
             ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+            IssuerSigningKey = signingKey,
             ClockSkew = TimeSpan.Zero
         };
 
