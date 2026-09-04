@@ -18,6 +18,11 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Forces the developer exception page middleware on regardless of ambient
+        // ASPNETCORE_ENVIRONMENT in CI, so a 500 comes back with the real exception
+        // message/stack in the body instead of an empty Production-mode response.
+        builder.UseEnvironment("Development");
+
         builder.ConfigureServices(services =>
         {
             // AddDbContext<T> doesn't just register DbContextOptions<T> — it also
@@ -70,9 +75,14 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth!.Token);
 
         var meResponse = await client.GetAsync("/api/auth/me");
+        var meBody = await meResponse.Content.ReadAsStringAsync();
 
         // This is the exact bug reported in production: a token generated moments
         // ago by this same process is rejected by its own [Authorize] handler.
-        Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
+        // Body is included in the failure message because a non-200 here could be
+        // either the auth bug itself (401) or something unrelated blowing up after
+        // auth succeeds (500) — those need very different fixes.
+        Assert.True(meResponse.StatusCode == HttpStatusCode.OK,
+            $"Expected 200 OK, got {(int)meResponse.StatusCode} {meResponse.StatusCode}. Body: {meBody}");
     }
 }
