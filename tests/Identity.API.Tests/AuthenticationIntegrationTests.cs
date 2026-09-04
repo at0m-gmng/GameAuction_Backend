@@ -20,9 +20,23 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services =>
         {
-            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<IdentityDbContext>));
-            if (descriptor is not null)
+            // AddDbContext<T> doesn't just register DbContextOptions<T> — it also
+            // registers the provider configuration (UseNpgsql) as its own
+            // IDbContextOptionsConfiguration<T> descriptor. Removing only
+            // DbContextOptions<IdentityDbContext> leaves that Npgsql configuration
+            // in place, so re-adding with UseInMemoryDatabase ends up with both
+            // providers configured on the same context and EF throws. Strip every
+            // descriptor parameterized by IdentityDbContext, not just one type.
+            var identityDbDescriptors = services
+                .Where(d => d.ServiceType.IsGenericType &&
+                            d.ServiceType.GetGenericArguments().Contains(typeof(IdentityDbContext)))
+                .ToList();
+            foreach (var descriptor in identityDbDescriptors)
                 services.Remove(descriptor);
+
+            var contextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IdentityDbContext));
+            if (contextDescriptor is not null)
+                services.Remove(contextDescriptor);
 
             services.AddDbContext<IdentityDbContext>(options =>
                 options.UseInMemoryDatabase($"IdentityTestDb-{Guid.NewGuid()}"));
