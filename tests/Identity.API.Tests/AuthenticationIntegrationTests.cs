@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using GameBackend.Services.Identity.API.Controllers.Dtos;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -111,12 +113,12 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
         Assert.True(registerResponse.StatusCode == HttpStatusCode.OK,
             $"Register failed: {(int)registerResponse.StatusCode} {registerResponse.StatusCode}. Body: {registerBody}");
 
-        var auth = System.Text.Json.JsonSerializer.Deserialize<AuthResponse>(registerBody,
-            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var auth = JsonSerializer.Deserialize<AuthResponse>(registerBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         Assert.NotNull(auth);
 
         client.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", auth!.Token);
+            new AuthenticationHeaderValue("Bearer", auth!.Token);
 
         var meResponse = await client.GetAsync("/api/auth/me");
         var meBody = await meResponse.Content.ReadAsStringAsync();

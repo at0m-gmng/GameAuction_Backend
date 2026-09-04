@@ -7,7 +7,7 @@ RUN dotnet publish src/Services/Identity.API/Identity.API.csproj -c Release -o /
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /out .
-# Каждый сервis лежит в своей подпапке (identity/, catalog/), а один и тот же
+# Каждый сервис лежит в своей подпапке (identity/, catalog/), а один и тот же
 # образ выбирает нужный через SERVICE_PATH. Запускаем из папки самого сервиса,
 # чтобы content root ASP.NET Core (по умолчанию — рабочая директория) совпадал с
 # местом, где лежит его appsettings.json. Иначе из общего /app файл не находится
