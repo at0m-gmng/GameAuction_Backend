@@ -34,6 +34,8 @@ builder.Services.AddDbContext<CatalogDbContext>(options =>
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<CreateItemCommandHandler>();
 builder.Services.AddScoped<GetItemsQueryHandler>();
+builder.Services.AddScoped<GetInventoryQueryHandler>();
+builder.Services.AddScoped<BuyItemCommandHandler>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
