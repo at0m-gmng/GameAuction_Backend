@@ -30,6 +30,16 @@ public sealed class JwtTokenGenerator
     /// <returns>JWT-токен в виде строки.</returns>
     public string Generate(Guid playerId)
     {
+        if (string.IsNullOrEmpty(_settings.SecretKey))
+            throw new InvalidOperationException("Jwt:SecretKey is not configured — check Jwt__SecretKey on the deployed environment.");
+
+        // Defensive fallback: if Issuer/Audience somehow arrive empty from
+        // configuration, fall back to the values committed in appsettings.json
+        // rather than emitting a token with no iss/aud (which validation
+        // would reject) or throwing (Claim's constructor rejects null values).
+        var issuer = string.IsNullOrEmpty(_settings.Issuer) ? "game-backend" : _settings.Issuer;
+        var audience = string.IsNullOrEmpty(_settings.Audience) ? "game-backend-clients" : _settings.Audience;
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -41,13 +51,13 @@ public sealed class JwtTokenGenerator
         {
             new Claim(JwtRegisteredClaimNames.Sub, playerId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iss, _settings.Issuer),
-            new Claim(JwtRegisteredClaimNames.Aud, _settings.Audience),
+            new Claim(JwtRegisteredClaimNames.Iss, issuer),
+            new Claim(JwtRegisteredClaimNames.Aud, audience),
         };
 
         var token = new JwtSecurityToken(
-            issuer: _settings.Issuer,
-            audience: _settings.Audience,
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes),
             signingCredentials: credentials);
