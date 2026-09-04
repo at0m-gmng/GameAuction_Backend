@@ -8,6 +8,7 @@ using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using System.Text;
 
 const string FrontendCorsPolicy = "Frontend";
@@ -47,6 +48,16 @@ builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHa
 // which is exactly what happened: generation saw a populated Audience,
 // validation saw an empty one, and every token was rejected as a result.
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
+
+// TEMPORARY DIAGNOSTICS for the IDX10208 investigation — remove once the
+// root cause is confirmed. Printed with Console.WriteLine (not ILogger,
+// since no DI/logging pipeline exists yet at this point) so it's guaranteed
+// to show up in Render's stdout log stream. Prefixed "JWT-DIAG" for easy
+// filtering via list_logs text search.
+Console.WriteLine(jwtSettings is null
+    ? "JWT-DIAG startup: GetSection(\"Jwt\").Get<JwtSettings>() returned NULL — the Jwt config section is missing entirely."
+    : $"JWT-DIAG startup: Environment={builder.Environment.EnvironmentName} Issuer='{jwtSettings.Issuer}' Audience='{jwtSettings.Audience}' SecretKeyLen={jwtSettings.SecretKey?.Length ?? -1} ExpiryMinutes={jwtSettings.ExpiryMinutes}");
+
 if (jwtSettings is not null)
 {
     builder.Services.AddSingleton(jwtSettings);
@@ -58,12 +69,6 @@ if (jwtSettings is not null)
     })
     .AddJwtBearer(options =>
     {
-        // JwtBearerOptions.Audience (not just TokenValidationParameters.
-        // ValidAudience) has to be set explicitly — per IDX10208 seen in
-        // Render logs, a freshly-constructed TokenValidationParameters
-        // object's ValidAudience wasn't being picked up by the framework's
-        // own post-configure step, so validation saw it as null regardless
-        // of what was assigned here.
         options.Audience = jwtSettings.Audience;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -75,6 +80,41 @@ if (jwtSettings is not null)
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
             ClockSkew = TimeSpan.Zero
+        };
+
+        // Confirms this closure actually ran (and with what values) — if this
+        // line never appears in logs, IOptionsFactory never invoked our
+        // configure delegate at all, which would point at a completely
+        // different problem than a bad Issuer/Audience value.
+        Console.WriteLine($"JWT-DIAG AddJwtBearer configure ran: ValidIssuer='{options.TokenValidationParameters.ValidIssuer}' ValidAudience='{options.TokenValidationParameters.ValidAudience}' Options.Audience='{options.Audience}'");
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                Console.WriteLine($"JWT-DIAG OnMessageReceived: hasToken={!string.IsNullOrEmpty(context.Token)} len={context.Token?.Length ?? 0}");
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                Console.WriteLine($"JWT-DIAG OnTokenValidated: sub={context.Principal?.FindFirst("sub")?.Value}");
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = context =>
+            {
+                var tvp = context.Options.TokenValidationParameters;
+                Console.WriteLine(
+                    $"JWT-DIAG OnAuthenticationFailed: exception={context.Exception.GetType().FullName} message=\"{context.Exception.Message}\" " +
+                    $"live.ValidIssuer='{tvp.ValidIssuer}' live.ValidAudience='{tvp.ValidAudience}' " +
+                    $"live.ValidIssuersCount={tvp.ValidIssuers?.Count() ?? -1} live.ValidAudiencesCount={tvp.ValidAudiences?.Count() ?? -1} " +
+                    $"live.Options.Audience='{context.Options.Audience}'");
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                Console.WriteLine($"JWT-DIAG OnChallenge: error='{context.Error}' description='{context.ErrorDescription}' authFailureMessage='{context.AuthenticateFailure?.Message}'");
+                return Task.CompletedTask;
+            }
         };
     });
 
