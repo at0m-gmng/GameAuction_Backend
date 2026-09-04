@@ -33,10 +33,16 @@ public sealed class JwtTokenGenerator
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        // Issuer/audience are added both as constructor params and as explicit
+        // claims below — belt and suspenders, since a prior build silently
+        // produced tokens missing "iss"/"aud", which made every validation
+        // request come back 401 regardless of how fresh the token was.
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, playerId.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iss, _settings.Issuer),
+            new Claim(JwtRegisteredClaimNames.Aud, _settings.Audience),
         };
 
         var token = new JwtSecurityToken(
