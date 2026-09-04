@@ -4,6 +4,7 @@ using GameBackend.Services.Identity.API.Controllers.Dtos;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,10 +13,22 @@ namespace Identity.API.Tests;
 // Exercises the exact same Program.cs wiring (AddJwtBearer + TokenValidationParameters)
 // that fails in production with IDX10208. Unlike JwtTokenGeneratorTests, this goes through
 // a real HTTP round trip: register -> real generated token -> real [Authorize] handler.
-// Only the Postgres DbContext is swapped for InMemory, since EnsureCreated() at startup
-// needs a database to talk to and CI has no Postgres available.
+//
+// The Postgres DbContext is swapped for SQLite (not the EF InMemory provider):
+// PlayerConfiguration maps the inventory as a PrimitiveCollection<List<Guid>>,
+// which the non-relational InMemory provider mishandles (that's what turned the
+// register call into a 500). SQLite is a real relational provider, so it stores
+// that collection as JSON the same way Npgsql stores it as uuid[], which is much
+// closer to production behaviour and is Microsoft's recommended provider for
+// integration tests for exactly this reason.
 public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
 {
+    // A SQLite in-memory database lives only as long as its connection is open,
+    // so the connection has to be held open for the whole factory lifetime rather
+    // than let EF open/close it per operation (which would wipe the schema created
+    // by EnsureCreated() at startup before the first request ever runs).
+    private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Forces the developer exception page middleware on regardless of ambient
@@ -23,15 +36,17 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
         // message/stack in the body instead of an empty Production-mode response.
         builder.UseEnvironment("Development");
 
+        _connection.Open();
+
         builder.ConfigureServices(services =>
         {
             // AddDbContext<T> doesn't just register DbContextOptions<T> — it also
             // registers the provider configuration (UseNpgsql) as its own
             // IDbContextOptionsConfiguration<T> descriptor. Removing only
             // DbContextOptions<IdentityDbContext> leaves that Npgsql configuration
-            // in place, so re-adding with UseInMemoryDatabase ends up with both
-            // providers configured on the same context and EF throws. Strip every
-            // descriptor parameterized by IdentityDbContext, not just one type.
+            // in place, so re-adding with UseSqlite ends up with both providers
+            // configured on the same context and EF throws. Strip every descriptor
+            // parameterized by IdentityDbContext, not just one type.
             var identityDbDescriptors = services
                 .Where(d => d.ServiceType.IsGenericType &&
                             d.ServiceType.GetGenericArguments().Contains(typeof(IdentityDbContext)))
@@ -44,8 +59,15 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
                 services.Remove(contextDescriptor);
 
             services.AddDbContext<IdentityDbContext>(options =>
-                options.UseInMemoryDatabase($"IdentityTestDb-{Guid.NewGuid()}"));
+                options.UseSqlite(_connection));
         });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+            _connection.Dispose();
     }
 
     [Fact]
@@ -66,9 +88,12 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
 
         var registerResponse = await client.PostAsJsonAsync("/api/auth/register",
             new RegisterRequest("TestPlayer", email, "Password123!"));
-        Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
+        var registerBody = await registerResponse.Content.ReadAsStringAsync();
+        Assert.True(registerResponse.StatusCode == HttpStatusCode.OK,
+            $"Register failed: {(int)registerResponse.StatusCode} {registerResponse.StatusCode}. Body: {registerBody}");
 
-        var auth = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
+        var auth = System.Text.Json.JsonSerializer.Deserialize<AuthResponse>(registerBody,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         Assert.NotNull(auth);
 
         client.DefaultRequestHeaders.Authorization =
