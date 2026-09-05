@@ -1,22 +1,22 @@
 namespace GameBackend.Services.Identity.API.Controllers.Dtos;
 
 /// <summary>
-/// Тело запроса на регистрацию.
+/// РўРµР»Рѕ Р·Р°РїСЂРѕСЃР° РЅР° СЂРµРіРёСЃС‚СЂР°С†РёСЋ.
 /// </summary>
-/// <param name="Nickname">Никнейм игрока.</param>
-/// <param name="Email">Email для входа.</param>
-/// <param name="Password">Пароль в открытом виде.</param>
+/// <param name="Nickname">РќРёРєРЅРµР№Рј РёРіСЂРѕРєР°.</param>
+/// <param name="Email">Email РґР»СЏ РІС…РѕРґР°.</param>
+/// <param name="Password">РџР°СЂРѕР»СЊ РІ РѕС‚РєСЂС‹С‚РѕРј РІРёРґРµ.</param>
 public sealed record RegisterRequest(string Nickname, string Email, string Password);
 
 /// <summary>
-/// Тело запроса на вход.
+/// РўРµР»Рѕ Р·Р°РїСЂРѕСЃР° РЅР° РІС…РѕРґ.
 /// </summary>
-/// <param name="Email">Email для входа.</param>
-/// <param name="Password">Пароль в открытом виде.</param>
+/// <param name="Email">Email РґР»СЏ РІС…РѕРґР°.</param>
+/// <param name="Password">РџР°СЂРѕР»СЊ РІ РѕС‚РєСЂС‹С‚РѕРј РІРёРґРµ.</param>
 public sealed record LoginRequest(string Email, string Password);
 
 /// <summary>
-/// Ответ с JWT-токеном.
+/// РћС‚РІРµС‚ СЃ JWT-С‚РѕРєРµРЅРѕРј.
 /// </summary>
-/// <param name="Token">JWT-токен.</param>
+/// <param name="Token">JWT-С‚РѕРєРµРЅ.</param>
 public sealed record AuthResponse(string Token);
