@@ -6,7 +6,9 @@ using GameBackend.SharedKernel.Security;
 
 namespace GameBackend.Services.Identity.API.Infrastructure.Security;
 
-/// <summary>Выпускает подписанные JWT игрокам (PlayerId кладётся в claim "sub").</summary>
+/// <summary>
+/// Выпускает подписанные JWT игрокам (PlayerId кладётся в claim "sub").
+/// </summary>
 public sealed class JwtTokenGenerator
 {
     private readonly JwtSettings _settings;
@@ -16,7 +18,9 @@ public sealed class JwtTokenGenerator
         _settings = settings;
     }
 
-    /// <summary>Создаёт подписанный JWT для указанного игрока.</summary>
+    /// <summary>
+    /// Создаёт подписанный JWT для указанного игрока.
+    /// </summary>
     public string Generate(Guid playerId)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
