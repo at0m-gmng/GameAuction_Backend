@@ -7,7 +7,5 @@ RUN dotnet publish src/Services/Identity.API/Identity.API.csproj -c Release -o /
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /out .
-# Один образ на все сервисы, SERVICE_PATH выбирает нужный. Запускаем из его папки,
-# чтобы content root совпал с местом appsettings.json — иначе из /app он не грузится
-# и Jwt:Issuer/Audience молча пусты.
+# Запуск из папки сервиса, чтобы content root совпал с его appsettings.json.
 CMD cd "$(dirname "$SERVICE_PATH")" && ASPNETCORE_URLS=http://0.0.0.0:$PORT dotnet "./$(basename "$SERVICE_PATH")"

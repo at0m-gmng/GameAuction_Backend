@@ -12,19 +12,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Identity.API.Tests;
 
-// End-to-end: register -> token -> [Authorize] /me, through the real Program.cs
-// JWT wiring. Uses SQLite, not the EF InMemory provider — the latter mishandles
-// the inventory PrimitiveCollection and 500s on register; SQLite stores it as
-// JSON, close to how Npgsql stores uuid[].
+// NOTE: SQLite, not EF InMemory — InMemory mishandles the inventory
+// PrimitiveCollection and 500s on register.
 public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
 {
-    // appsettings.json ships only a 216-bit placeholder key; a valid one must come
-    // via env var, because Program.cs reads config before app.Build(), after which
-    // the factory's ConfigureAppConfiguration would be too late.
+    // NOTE: valid key must come via env var — Program.cs reads config before
+    // app.Build(), too early for the factory's ConfigureAppConfiguration.
     private const string TestSecretKey = "integration-test-signing-key-that-is-long-enough-for-hs256";
 
-    // A SQLite in-memory DB lives only while its connection is open, so keep it open
-    // for the factory's lifetime — else EnsureCreated's schema is gone before requests.
+    // NOTE: a SQLite in-memory DB lives only while its connection is open.
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
 
     public AuthenticationIntegrationTests()
@@ -34,16 +30,14 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Development => developer exception page, so a 500 returns the real body.
         builder.UseEnvironment("Development");
 
         _connection.Open();
 
         builder.ConfigureServices(services =>
         {
-            // AddDbContext registers several descriptors parameterised by
-            // IdentityDbContext (options + the Npgsql provider config); strip them all
-            // before re-adding SQLite, or EF sees two providers on one context.
+            // NOTE: AddDbContext registers several descriptors keyed by
+            // IdentityDbContext; strip them all before re-adding SQLite.
             var identityDbDescriptors = services
                 .Where(d => d.ServiceType.IsGenericType &&
                             d.ServiceType.GetGenericArguments().Contains(typeof(IdentityDbContext)))
@@ -66,7 +60,6 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
         if (disposing)
         {
             _connection.Dispose();
-            // Env vars are process-global; clear it so it can't leak into other tests.
             Environment.SetEnvironmentVariable("Jwt__SecretKey", null);
         }
     }
@@ -103,8 +96,6 @@ public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
         var meResponse = await client.GetAsync("/api/auth/me");
         var meBody = await meResponse.Content.ReadAsStringAsync();
 
-        // The production bug: a just-issued token rejected by its own [Authorize]
-        // handler. Include the body so a 401 (auth) vs 500 (other) is distinguishable.
         Assert.True(meResponse.StatusCode == HttpStatusCode.OK,
             $"Expected 200 OK, got {(int)meResponse.StatusCode} {meResponse.StatusCode}. Body: {meBody}");
     }

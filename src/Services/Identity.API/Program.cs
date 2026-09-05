@@ -12,7 +12,6 @@ using System.Text;
 
 const string FrontendCorsPolicy = "Frontend";
 
-// HS256 требует ключ не короче 256 бит (32 байта).
 const int HmacSha256MinKeyBytes = 32;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,12 +39,10 @@ builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
 
-// Один экземпляр настроек на выпуск и валидацию — чтобы issuer/audience/ключ не разошлись.
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException(
         $"Конфигурация JWT отсутствует: секция '{JwtSettings.SectionName}' не найдена.");
 
-// Fail-fast на старте: кривой конфиг падает сразу, а не молчаливым 401 на каждый запрос.
 if (string.IsNullOrWhiteSpace(jwtSettings.Issuer))
     throw new InvalidOperationException("Jwt:Issuer не задан.");
 if (string.IsNullOrWhiteSpace(jwtSettings.Audience))
@@ -104,5 +101,5 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-// Точка входа делается видимой для WebApplicationFactory<Program> в интеграционных тестах.
+// NOTE: exposed for WebApplicationFactory<Program> in integration tests.
 public partial class Program { }
