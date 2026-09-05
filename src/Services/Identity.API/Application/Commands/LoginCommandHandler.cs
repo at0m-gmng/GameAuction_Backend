@@ -9,6 +9,14 @@ namespace GameBackend.Services.Identity.API.Application.Commands;
 /// </summary>
 public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
 {
+    // NOTE: valid-format (salt.hash) but not the hash of any real password.
+    // Used when the player isn't found, so PasswordHasher.Verify always runs
+    // its full PBKDF2 pass — otherwise a missing player short-circuits before
+    // hashing while a wrong password doesn't, and the timing difference lets
+    // an attacker enumerate registered emails.
+    private const string DummyPasswordHash =
+        "AAAAAAAAAAAAAAAAAAAAAA==.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
     private readonly IPlayerRepository _repository;
     private readonly PasswordHasher _hasher;
     private readonly JwtTokenGenerator _jwt;
@@ -36,11 +44,11 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
     public async Task<string> Handle(LoginCommand command, CancellationToken cancellationToken)
     {
         var normalizedEmail = command.Email.ToLowerInvariant();
+        var player = await _repository.GetByNormalizedEmailAsync(normalizedEmail, cancellationToken);
 
-        var player = await _repository.GetByNormalizedEmailAsync(normalizedEmail, cancellationToken)
-                     ?? throw new InvalidOperationException("Неверный email или пароль");
+        var passwordValid = _hasher.Verify(command.Password, player?.PasswordHash ?? DummyPasswordHash);
 
-        if (!_hasher.Verify(command.Password, player.PasswordHash))
+        if (player is null || !passwordValid)
             throw new InvalidOperationException("Неверный email или пароль");
 
         return _jwt.Generate(player.Id);
