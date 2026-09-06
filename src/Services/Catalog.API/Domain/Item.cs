@@ -45,6 +45,12 @@ public sealed class Item : AggregateRoot
     public int Stock { get; private set; }
 
     /// <summary>
+    /// Идентификатор игрока-владельца для приватных предметов (например, подарков).
+    /// Null — публичная карточка каталога, доступная всем в витрине.
+    /// </summary>
+    public Guid? OwnerId { get; private set; }
+
+    /// <summary>
     /// Инициализирует новую каталожную карточку предмета.
     /// </summary>
     /// <param name="name">Название предмета.</param>
@@ -54,6 +60,7 @@ public sealed class Item : AggregateRoot
     /// <param name="imageUrl">Ссылка на изображение.</param>
     /// <param name="startingPrice">Начальная цена (не может быть отрицательной).</param>
     /// <param name="stock">Начальный остаток (не может быть отрицательным).</param>
+    /// <param name="ownerId">Владелец для приватного предмета, иначе null.</param>
     private Item(
         string name,
         string? description,
@@ -61,7 +68,8 @@ public sealed class Item : AggregateRoot
         ItemRarity rarity,
         string? imageUrl,
         decimal startingPrice,
-        int stock)
+        int stock,
+        Guid? ownerId)
         : base(Guid.NewGuid())
     {
         Name = name;
@@ -71,6 +79,7 @@ public sealed class Item : AggregateRoot
         ImageUrl = imageUrl;
         StartingPrice = startingPrice;
         Stock = stock;
+        OwnerId = ownerId;
 
         AddDomainEvent(new ItemCreated(Id, Name, StartingPrice));
     }
@@ -105,16 +114,51 @@ public sealed class Item : AggregateRoot
         decimal startingPrice,
         int stock)
     {
+        ValidateCommonFields(name, startingPrice);
+
+        if (stock < 0)
+            throw new ArgumentOutOfRangeException(nameof(stock), "Остаток не может быть отрицательным");
+
+        return new Item(name, description, category, rarity, imageUrl, startingPrice, stock, ownerId: null);
+    }
+
+    /// <summary>
+    /// Фабричный метод для создания приватного предмета конкретного игрока
+    /// (например, приветственного подарка). Остаток всегда равен нулю — предмет
+    /// уникален и не продаётся в общей витрине; владение фиксируется отдельно
+    /// через <see cref="OwnerId"/> и позицию инвентаря.
+    /// </summary>
+    /// <param name="ownerId">Идентификатор игрока-владельца.</param>
+    /// <param name="name">Название предмета.</param>
+    /// <param name="description">Описание предмета.</param>
+    /// <param name="category">Категория предмета.</param>
+    /// <param name="rarity">Редкость предмета.</param>
+    /// <param name="imageUrl">Ссылка на изображение.</param>
+    /// <param name="startingPrice">Начальная цена предмета.</param>
+    /// <returns>Новый экземпляр приватной каталожной карточки предмета.</returns>
+    /// <exception cref="ArgumentException">Если название пустое.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Если цена отрицательная.</exception>
+    public static Item CreateOwned(
+        Guid ownerId,
+        string name,
+        string? description,
+        ItemCategory category,
+        ItemRarity rarity,
+        string? imageUrl,
+        decimal startingPrice)
+    {
+        ValidateCommonFields(name, startingPrice);
+
+        return new Item(name, description, category, rarity, imageUrl, startingPrice, stock: 0, ownerId);
+    }
+
+    private static void ValidateCommonFields(string name, decimal startingPrice)
+    {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Название предмета не может быть пустым", nameof(name));
 
         if (startingPrice < 0)
             throw new ArgumentOutOfRangeException(nameof(startingPrice), "Начальная цена не может быть отрицательной");
-
-        if (stock < 0)
-            throw new ArgumentOutOfRangeException(nameof(stock), "Остаток не может быть отрицательным");
-
-        return new Item(name, description, category, rarity, imageUrl, startingPrice, stock);
     }
 
     /// <summary>

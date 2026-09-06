@@ -36,7 +36,14 @@ builder.Services.AddScoped<CreateItemCommandHandler>();
 builder.Services.AddScoped<GetItemsQueryHandler>();
 builder.Services.AddScoped<GetInventoryQueryHandler>();
 builder.Services.AddScoped<BuyItemCommandHandler>();
+builder.Services.AddScoped<GrantItemCommandHandler>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
+
+var internalApiKey = builder.Configuration["InternalApi:Key"];
+if (string.IsNullOrWhiteSpace(internalApiKey))
+    throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
+
+builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
 if (jwtSettings is not null)

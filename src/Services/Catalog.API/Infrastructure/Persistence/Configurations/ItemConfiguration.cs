@@ -36,6 +36,9 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.HasIndex(x => x.Category);
         builder.HasIndex(x => x.Rarity);
 
+        // Индекс по владельцу — по нему ищутся приватные предметы конкретного игрока.
+        builder.HasIndex(x => x.OwnerId);
+
         // Доменные события живут только в памяти и не сохраняются в БД.
         builder.Ignore(x => x.DomainEvents);
     }

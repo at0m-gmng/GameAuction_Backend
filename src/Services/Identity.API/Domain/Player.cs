@@ -41,15 +41,19 @@ public sealed class Player : AggregateRoot
     /// </summary>
     public DateTime CreatedAt { get; private set; }
 
-    /// <summary>
-    /// Список ID предметов, выигранных игроком.
-    /// </summary>
+    // TODO: не используется — реальный инвентарь ведётся в Catalog.API
+    // (Item + InventoryItem). Убрать это поле или решить, зачем оно нужно здесь.
     private readonly List<Guid> _inventory = new();
 
     /// <summary>
     /// IReadOnly-коллекция инвентаря для внешнего доступа.
     /// </summary>
     public IReadOnlyCollection<Guid> Inventory => _inventory.AsReadOnly();
+
+    /// <summary>
+    /// Признак того, что игроку уже выдан приветственный подарочный предмет.
+    /// </summary>
+    public bool WelcomeGiftGranted { get; private set; }
 
     /// <summary>
     /// Инициализирует нового игрока.
@@ -128,5 +132,13 @@ public sealed class Player : AggregateRoot
             throw new ArgumentException("Идентификатор предмета не может быть пустым", nameof(itemId));
 
         _inventory.Add(itemId);
+    }
+
+    /// <summary>
+    /// Отмечает, что приветственный подарочный предмет выдан.
+    /// </summary>
+    public void MarkWelcomeGiftGranted()
+    {
+        WelcomeGiftGranted = true;
     }
 }

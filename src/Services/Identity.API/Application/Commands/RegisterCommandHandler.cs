@@ -1,4 +1,5 @@
 ﻿using GameBackend.Services.Identity.API.Application.Interfaces;
+using GameBackend.Services.Identity.API.Application.Services;
 using GameBackend.Services.Identity.API.Domain;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
 using GameBackend.SharedKernel.Application;
@@ -13,6 +14,7 @@ public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand, st
     private readonly IPlayerRepository _repository;
     private readonly PasswordHasher _hasher;
     private readonly JwtTokenGenerator _jwt;
+    private readonly WelcomeGiftFulfiller _welcomeGift;
 
     /// <summary>
     /// Инициализирует обработчик зависимостями.
@@ -20,11 +22,17 @@ public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand, st
     /// <param name="repository">Репозиторий игроков.</param>
     /// <param name="hasher">Хешер паролей.</param>
     /// <param name="jwt">Генератор JWT.</param>
-    public RegisterCommandHandler(IPlayerRepository repository, PasswordHasher hasher, JwtTokenGenerator jwt)
+    /// <param name="welcomeGift">Выдача приветственного подарка.</param>
+    public RegisterCommandHandler(
+        IPlayerRepository repository,
+        PasswordHasher hasher,
+        JwtTokenGenerator jwt,
+        WelcomeGiftFulfiller welcomeGift)
     {
         _repository = repository;
         _hasher = hasher;
         _jwt = jwt;
+        _welcomeGift = welcomeGift;
     }
 
     /// <summary>
@@ -46,6 +54,8 @@ public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand, st
         var player = Player.Register(command.Nickname, command.Email, passwordHash);
 
         await _repository.SaveAsync(player, cancellationToken);
+
+        await _welcomeGift.EnsureGrantedAsync(player, cancellationToken);
 
         return _jwt.Generate(player.Id);
     }

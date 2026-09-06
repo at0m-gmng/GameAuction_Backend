@@ -21,6 +21,15 @@ public static class CatalogDbInitializer
         // Для production предпочтительны миграции; здесь — простой путь для демо.
         await context.Database.EnsureCreatedAsync(cancellationToken);
 
+        // NOTE: EnsureCreated не доливает колонки в уже существующую БД. Патч
+        // идемпотентен (IF NOT EXISTS) — безопасен и на новой, и на старой БД.
+        await context.Database.ExecuteSqlRawAsync(
+            """ALTER TABLE "Items" ADD COLUMN IF NOT EXISTS "OwnerId" uuid NULL;""",
+            cancellationToken);
+        await context.Database.ExecuteSqlRawAsync(
+            """CREATE INDEX IF NOT EXISTS "IX_Items_OwnerId" ON "Items" ("OwnerId");""",
+            cancellationToken);
+
         // Идемпотентность: если данные уже есть, не сеем повторно.
         if (await context.Items.AnyAsync(cancellationToken))
             return;

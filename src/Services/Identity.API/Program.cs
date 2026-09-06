@@ -1,5 +1,7 @@
 using GameBackend.Services.Identity.API.Application.Commands;
 using GameBackend.Services.Identity.API.Application.Interfaces;
+using GameBackend.Services.Identity.API.Application.Services;
+using GameBackend.Services.Identity.API.Infrastructure.ExternalServices;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence.Repositories;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
@@ -38,6 +40,38 @@ builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
+
+var internalApiKey = builder.Configuration["InternalApi:Key"];
+if (string.IsNullOrWhiteSpace(internalApiKey))
+    throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
+
+var generationBaseUrl = builder.Configuration["InternalApi:GenerationBaseUrl"];
+if (string.IsNullOrWhiteSpace(generationBaseUrl))
+    throw new InvalidOperationException("InternalApi:GenerationBaseUrl не задан.");
+
+var catalogBaseUrl = builder.Configuration["InternalApi:CatalogBaseUrl"];
+if (string.IsNullOrWhiteSpace(catalogBaseUrl))
+    throw new InvalidOperationException("InternalApi:CatalogBaseUrl не задан.");
+
+// NOTE: короткий таймаут — недоступность Generation.API/Catalog.API не должна
+// заметно задерживать регистрацию/вход (см. WelcomeGiftFulfiller).
+var internalApiTimeout = TimeSpan.FromSeconds(5);
+
+builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(generationBaseUrl);
+    client.Timeout = internalApiTimeout;
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+});
+
+builder.Services.AddHttpClient<ICatalogServiceClient, CatalogServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(catalogBaseUrl);
+    client.Timeout = internalApiTimeout;
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+});
+
+builder.Services.AddScoped<WelcomeGiftFulfiller>();
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException(
@@ -97,6 +131,12 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     db.Database.EnsureCreated();
+
+    // NOTE: EnsureCreated только создаёт схему на пустой БД — на уже существующей
+    // (как на проде) новые колонки модели сами не появятся. Патч идемпотентен:
+    // IF NOT EXISTS безопасен и на свежесозданной, и на старой БД, при каждом старте.
+    db.Database.ExecuteSqlRaw(
+        """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "WelcomeGiftGranted" boolean NOT NULL DEFAULT false;""");
 }
 
 app.Run();

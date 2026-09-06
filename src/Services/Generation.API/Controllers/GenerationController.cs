@@ -1,8 +1,7 @@
 ﻿using GameBackend.Services.Generation.API.Application.Commands;
 using GameBackend.Services.Generation.API.Domain;
+using GameBackend.SharedKernel.Security;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace GameBackend.Services.Generation.API.Controllers;
 
@@ -14,17 +13,17 @@ namespace GameBackend.Services.Generation.API.Controllers;
 public sealed class GenerationController : ControllerBase
 {
     private readonly GenerateItemCommandHandler _generate;
-    private readonly IConfiguration _configuration;
+    private readonly IInternalCallerValidator _internalCallerValidator;
 
     /// <summary>
-    /// Инициализирует контроллер хендлером и конфигурацией.
+    /// Инициализирует контроллер хендлером и валидатором внутренних вызовов.
     /// </summary>
     /// <param name="generate">Хендлер генерации.</param>
-    /// <param name="configuration">Конфигурация для внутреннего ключа.</param>
-    public GenerationController(GenerateItemCommandHandler generate, IConfiguration configuration)
+    /// <param name="internalCallerValidator">Проверка X-Internal-Key.</param>
+    public GenerationController(GenerateItemCommandHandler generate, IInternalCallerValidator internalCallerValidator)
     {
         _generate = generate;
-        _configuration = configuration;
+        _internalCallerValidator = internalCallerValidator;
     }
 
     /// <summary>
@@ -34,7 +33,7 @@ public sealed class GenerationController : ControllerBase
     [HttpPost("generate")]
     public async Task<ActionResult<GeneratedItemDto>> Generate(CancellationToken ct = default)
     {
-        if (!IsInternalCaller())
+        if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
             return Unauthorized();
 
         try
@@ -46,21 +45,5 @@ public sealed class GenerationController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-    }
-
-    /// <summary>
-    /// Сверяет X-Internal-Key с общим секретом в постоянное время.
-    /// </summary>
-    private bool IsInternalCaller()
-    {
-        var expected = _configuration["InternalApi:Key"];
-        var actual = Request.Headers["X-Internal-Key"].ToString();
-
-        if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(actual))
-            return false;
-
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(actual),
-            Encoding.UTF8.GetBytes(expected));
     }
 }

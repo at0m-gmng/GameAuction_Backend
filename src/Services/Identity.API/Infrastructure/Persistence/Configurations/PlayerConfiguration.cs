@@ -28,6 +28,7 @@ public class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(x => x.NormalizedEmail).HasMaxLength(EmailMaxLength).IsRequired();
         builder.Property(x => x.PasswordHash).HasMaxLength(PasswordHashMaxLength).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.WelcomeGiftGranted).IsRequired();
 
         // Уникальный индекс по нормализованному email для быстрого поиска и уникальности.
         builder.HasIndex(x => x.NormalizedEmail).IsUnique();
