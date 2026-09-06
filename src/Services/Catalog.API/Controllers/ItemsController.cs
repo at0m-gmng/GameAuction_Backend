@@ -1,7 +1,7 @@
 ﻿using GameBackend.Services.Catalog.API.Application.Commands;
 using GameBackend.Services.Catalog.API.Application.Items;
 using GameBackend.Services.Catalog.API.Application.Queries;
-using GameBackend.Services.Catalog.API.Domain;
+using GameBackend.SharedKernel.Domain;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GameBackend.Services.Catalog.API.Controllers;

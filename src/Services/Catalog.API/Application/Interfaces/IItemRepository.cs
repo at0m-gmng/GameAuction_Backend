@@ -1,4 +1,5 @@
 ﻿using GameBackend.Services.Catalog.API.Domain;
+using GameBackend.SharedKernel.Domain;
 
 namespace GameBackend.Services.Catalog.API.Application.Interfaces;
 

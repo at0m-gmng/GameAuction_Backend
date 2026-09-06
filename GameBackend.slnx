@@ -2,6 +2,7 @@
   <Folder Name="/src/" />
   <Folder Name="/src/Services/">
     <Project Path="src/Services/Catalog.API/Catalog.API.csproj" />
+    <Project Path="src/Services/Generation.API/Generation.API.csproj" />
     <Project Path="src/Services/Identity.API/Identity.API.csproj" />
     <Project Path="src/Services/Lobby.API/Lobby.API.csproj" />
   </Folder>

@@ -1,8 +1,8 @@
 ﻿using GameBackend.Services.Catalog.API.Application.Commands;
 using GameBackend.Services.Catalog.API.Application.Items;
 using GameBackend.Services.Catalog.API.Application.Queries;
-using GameBackend.Services.Catalog.API.Domain;
 using GameBackend.SharedKernel.Application;
+using GameBackend.SharedKernel.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;

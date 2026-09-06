@@ -1,4 +1,4 @@
-﻿namespace GameBackend.Services.Catalog.API.Domain;
+﻿namespace GameBackend.SharedKernel.Domain;
 
 /// <summary>
 /// Категория предмета для фильтрации в каталоге.

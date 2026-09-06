@@ -1,4 +1,4 @@
-﻿namespace GameBackend.Services.Catalog.API.Domain;
+﻿namespace GameBackend.SharedKernel.Domain;
 
 /// <summary>
 /// Редкость предмета. Влияет на ценность и используется фильтром "Rare+".

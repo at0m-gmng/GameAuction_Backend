@@ -1,4 +1,5 @@
 ﻿using GameBackend.Services.Catalog.API.Domain;
+using GameBackend.SharedKernel.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace GameBackend.Services.Catalog.API.Infrastructure.Persistence;
