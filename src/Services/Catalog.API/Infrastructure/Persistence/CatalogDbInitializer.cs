@@ -23,12 +23,18 @@ public static class CatalogDbInitializer
 
         // NOTE: EnsureCreated не доливает колонки в уже существующую БД. Патч
         // идемпотентен (IF NOT EXISTS) — безопасен и на новой, и на старой БД.
-        await context.Database.ExecuteSqlRawAsync(
-            """ALTER TABLE "Items" ADD COLUMN IF NOT EXISTS "OwnerId" uuid NULL;""",
-            cancellationToken);
-        await context.Database.ExecuteSqlRawAsync(
-            """CREATE INDEX IF NOT EXISTS "IX_Items_OwnerId" ON "Items" ("OwnerId");""",
-            cancellationToken);
+        // Синтаксис специфичен для Postgres — на других провайдерах (например,
+        // SQLite в интеграционных тестах) EnsureCreated уже создаёт колонку из
+        // модели, отдельный патч там не нужен и упал бы на синтаксисе.
+        if (context.Database.IsNpgsql())
+        {
+            await context.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Items" ADD COLUMN IF NOT EXISTS "OwnerId" uuid NULL;""",
+                cancellationToken);
+            await context.Database.ExecuteSqlRawAsync(
+                """CREATE INDEX IF NOT EXISTS "IX_Items_OwnerId" ON "Items" ("OwnerId");""",
+                cancellationToken);
+        }
 
         // Идемпотентность: если данные уже есть, не сеем повторно.
         if (await context.Items.AnyAsync(cancellationToken))

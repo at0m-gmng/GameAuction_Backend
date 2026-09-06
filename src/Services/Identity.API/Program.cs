@@ -135,8 +135,12 @@ using (var scope = app.Services.CreateScope())
     // NOTE: EnsureCreated только создаёт схему на пустой БД — на уже существующей
     // (как на проде) новые колонки модели сами не появятся. Патч идемпотентен:
     // IF NOT EXISTS безопасен и на свежесозданной, и на старой БД, при каждом старте.
-    db.Database.ExecuteSqlRaw(
-        """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "WelcomeGiftGranted" boolean NOT NULL DEFAULT false;""");
+    // Синтаксис ADD COLUMN IF NOT EXISTS специфичен для Postgres — на других
+    // провайдерах (например, SQLite в интеграционных тестах) он не нужен и
+    // не должен выполняться: там EnsureCreated уже создаёт колонку из модели.
+    if (db.Database.IsNpgsql())
+        db.Database.ExecuteSqlRaw(
+            """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "WelcomeGiftGranted" boolean NOT NULL DEFAULT false;""");
 }
 
 app.Run();
