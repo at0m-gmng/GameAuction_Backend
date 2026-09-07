@@ -77,6 +77,13 @@ builder.Services
     })
     .AddJwtBearer(options =>
     {
+        // Без этого JwtBearerHandler по умолчанию переименовывает входящий
+        // claim "sub" в легаси-URI ClaimTypes.NameIdentifier, из-за чего
+        // User.FindFirst("sub") в CatalogController всегда возвращал null,
+        // а инвентарь — 401 без единого исключения в логах (валидация токена
+        // проходила успешно, отказ происходил уже в контроллере).
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -87,21 +94,6 @@ builder.Services
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = signingKey,
             ClockSkew = TimeSpan.Zero,
-        };
-
-        // NOTE: TEMPORARY diagnostics for this specific 401 investigation —
-        // remove once confirmed fixed. Shows the *live* validation params at
-        // the moment a real request fails, instead of guessing from source.
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
-            {
-                var tvp = context.Options.TokenValidationParameters;
-                Console.WriteLine(
-                    $"JWT-DIAG Catalog OnAuthenticationFailed: exception={context.Exception.GetType().Name} " +
-                    $"message=\"{context.Exception.Message}\" ValidIssuer='{tvp.ValidIssuer}' ValidAudience='{tvp.ValidAudience}'");
-                return Task.CompletedTask;
-            },
         };
     });
 
