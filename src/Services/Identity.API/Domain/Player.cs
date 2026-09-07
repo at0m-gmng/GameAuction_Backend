@@ -41,18 +41,15 @@ public sealed class Player : AggregateRoot
     /// </summary>
     public DateTime CreatedAt { get; private set; }
 
-    // TODO: неиспользуемое поле — реальный инвентарь теперь в Catalog.API (Item + InventoryItem).
-    private readonly List<Guid> _inventory = new();
-
-    /// <summary>
-    /// IReadOnly-коллекция инвентаря для внешнего доступа.
-    /// </summary>
-    public IReadOnlyCollection<Guid> Inventory => _inventory.AsReadOnly();
-
     /// <summary>
     /// Признак того, что игроку уже выдан приветственный подарочный предмет.
     /// </summary>
     public bool WelcomeGiftGranted { get; private set; }
+
+    /// <summary>
+    /// Признак того, что игроку уже начислен стартовый баланс.
+    /// </summary>
+    public bool StartingBalanceGranted { get; private set; }
 
     /// <summary>
     /// Инициализирует нового игрока.
@@ -60,14 +57,16 @@ public sealed class Player : AggregateRoot
     /// <param name="nickname">Отображаемое имя.</param>
     /// <param name="email">Email в оригинальном написании.</param>
     /// <param name="passwordHash">Хеш пароля.</param>
-    private Player(string nickname, string email, string passwordHash)
+    /// <param name="startingBalance">Баланс при регистрации.</param>
+    private Player(string nickname, string email, string passwordHash, GoldCredits startingBalance)
         : base(Guid.NewGuid())
     {
         Nickname = nickname;
         Email = email;
         NormalizedEmail = email.ToLowerInvariant();
         PasswordHash = passwordHash;
-        Balance = GoldCredits.Zero;
+        Balance = startingBalance;
+        StartingBalanceGranted = true;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -84,9 +83,10 @@ public sealed class Player : AggregateRoot
     /// <param name="nickname">Отображаемое имя.</param>
     /// <param name="email">Email в оригинальном написании.</param>
     /// <param name="passwordHash">Хеш пароля (уже вычисленный).</param>
+    /// <param name="startingBalance">Баланс, начисляемый при регистрации.</param>
     /// <returns>Новый экземпляр игрока.</returns>
     /// <exception cref="ArgumentException">Если любое из полей пустое.</exception>
-    public static Player Register(string nickname, string email, string passwordHash)
+    public static Player Register(string nickname, string email, string passwordHash, GoldCredits startingBalance)
     {
         if (string.IsNullOrWhiteSpace(nickname))
             throw new ArgumentException("Никнейм не может быть пустым", nameof(nickname));
@@ -97,7 +97,7 @@ public sealed class Player : AggregateRoot
         if (string.IsNullOrWhiteSpace(passwordHash))
             throw new ArgumentException("Хеш пароля не может быть пустым", nameof(passwordHash));
 
-        return new Player(nickname, email, passwordHash);
+        return new Player(nickname, email, passwordHash, startingBalance);
     }
 
     /// <summary>
@@ -121,23 +121,27 @@ public sealed class Player : AggregateRoot
     }
 
     /// <summary>
-    /// Добавляет выигранный предмет в инвентарь игрока.
-    /// </summary>
-    /// <param name="itemId">Идентификатор предмета из каталога.</param>
-    /// <exception cref="ArgumentException">Если itemId пустой.</exception>
-    public void AddToInventory(Guid itemId)
-    {
-        if (itemId == Guid.Empty)
-            throw new ArgumentException("Идентификатор предмета не может быть пустым", nameof(itemId));
-
-        _inventory.Add(itemId);
-    }
-
-    /// <summary>
     /// Отмечает, что приветственный подарочный предмет выдан.
     /// </summary>
     public void MarkWelcomeGiftGranted()
     {
         WelcomeGiftGranted = true;
+    }
+
+    /// <summary>
+    /// Начисляет стартовый баланс, если он ещё не был начислен (для игроков,
+    /// зарегистрированных до появления этого параметра). Не переначисляет
+    /// тем, кто уже получил его — независимо от того, сколько они потратили.
+    /// </summary>
+    /// <param name="startingBalance">Текущая настроенная сумма стартового баланса.</param>
+    /// <returns>true, если начисление произошло.</returns>
+    public bool GrantStartingBalanceIfNeeded(GoldCredits startingBalance)
+    {
+        if (StartingBalanceGranted)
+            return false;
+
+        Balance = Balance.Add(startingBalance);
+        StartingBalanceGranted = true;
+        return true;
     }
 }

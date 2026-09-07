@@ -1,6 +1,7 @@
 using GameBackend.Services.Identity.API.Application.Commands;
 using GameBackend.Services.Identity.API.Application.Interfaces;
 using GameBackend.Services.Identity.API.Application.Services;
+using GameBackend.Services.Identity.API.Infrastructure.Configuration;
 using GameBackend.Services.Identity.API.Infrastructure.ExternalServices;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence.Repositories;
@@ -37,6 +38,12 @@ builder.Services.AddDbContext<IdentityDbContext>(options =>
             errorCodesToAdd: null)));
 
 builder.Services.AddSingleton<PasswordHasher>();
+
+// Не fail-fast: отсутствие секции просто означает StartingBalance = 0, а не
+// сломанный сервис — это игровой параметр, а не секрет вроде Jwt:SecretKey.
+var economySettings = builder.Configuration.GetSection(EconomySettings.SectionName).Get<EconomySettings>()
+    ?? new EconomySettings();
+builder.Services.AddSingleton(economySettings);
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
@@ -133,8 +140,19 @@ using (var scope = app.Services.CreateScope())
 
     // NOTE: EnsureCreated не доливает колонки в старую БД — патч идемпотентен, только для Postgres.
     if (db.Database.IsNpgsql())
+    {
         db.Database.ExecuteSqlRaw(
             """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "WelcomeGiftGranted" boolean NOT NULL DEFAULT false;""");
+
+        // NOTE: DEFAULT false здесь — это и есть бэкфилл: игроки, зарегистрированные
+        // до появления стартового баланса, получают false и дополучат его при
+        // следующем логине через Player.GrantStartingBalanceIfNeeded.
+        db.Database.ExecuteSqlRaw(
+            """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "StartingBalanceGranted" boolean NOT NULL DEFAULT false;""");
+
+        // NOTE: "Inventory" — осиротевшая колонка от удалённого неиспользуемого Player._inventory.
+        db.Database.ExecuteSqlRaw("""ALTER TABLE "Players" DROP COLUMN IF EXISTS "Inventory";""");
+    }
 }
 
 app.Run();

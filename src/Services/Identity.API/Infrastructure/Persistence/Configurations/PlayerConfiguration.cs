@@ -29,14 +29,10 @@ public class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(x => x.PasswordHash).HasMaxLength(PasswordHashMaxLength).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.WelcomeGiftGranted).IsRequired();
+        builder.Property(x => x.StartingBalanceGranted).IsRequired();
 
         // Уникальный индекс по нормализованному email для быстрого поиска и уникальности.
         builder.HasIndex(x => x.NormalizedEmail).IsUnique();
-
-        // Инвентарь — массив uuid[] в PostgreSQL (primitive collection).
-        builder.Ignore(x => x.Inventory);
-        builder.PrimitiveCollection<List<Guid>>("_inventory")
-            .HasColumnName("Inventory");
 
         // GoldCredits — owned type (value object).
         builder.OwnsOne(x => x.Balance, balance =>

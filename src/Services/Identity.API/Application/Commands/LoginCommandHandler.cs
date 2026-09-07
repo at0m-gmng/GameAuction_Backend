@@ -1,5 +1,7 @@
 ﻿using GameBackend.Services.Identity.API.Application.Interfaces;
 using GameBackend.Services.Identity.API.Application.Services;
+using GameBackend.Services.Identity.API.Domain.ValueObjects;
+using GameBackend.Services.Identity.API.Infrastructure.Configuration;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
 using GameBackend.SharedKernel.Application;
 
@@ -18,6 +20,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
     private readonly PasswordHasher _hasher;
     private readonly JwtTokenGenerator _jwt;
     private readonly WelcomeGiftFulfiller _welcomeGift;
+    private readonly EconomySettings _economy;
 
     /// <summary>
     /// Инициализирует обработчик зависимостями.
@@ -26,16 +29,19 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
     /// <param name="hasher">Хешер паролей.</param>
     /// <param name="jwt">Генератор JWT.</param>
     /// <param name="welcomeGift">Довыдача приветственного подарка, если он не был выдан при регистрации.</param>
+    /// <param name="economy">Игровые экономические параметры.</param>
     public LoginCommandHandler(
         IPlayerRepository repository,
         PasswordHasher hasher,
         JwtTokenGenerator jwt,
-        WelcomeGiftFulfiller welcomeGift)
+        WelcomeGiftFulfiller welcomeGift,
+        EconomySettings economy)
     {
         _repository = repository;
         _hasher = hasher;
         _jwt = jwt;
         _welcomeGift = welcomeGift;
+        _economy = economy;
     }
 
     /// <summary>
@@ -56,6 +62,10 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
             throw new InvalidOperationException("Неверный email или пароль");
 
         await _welcomeGift.EnsureGrantedAsync(player, cancellationToken);
+
+        // Довыдача для игроков, зарегистрированных до появления стартового баланса.
+        if (player.GrantStartingBalanceIfNeeded(new GoldCredits(_economy.StartingBalance)))
+            await _repository.SaveAsync(player, cancellationToken);
 
         return _jwt.Generate(player.Id);
     }

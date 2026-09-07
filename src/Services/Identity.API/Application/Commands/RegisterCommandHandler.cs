@@ -1,6 +1,8 @@
 ﻿using GameBackend.Services.Identity.API.Application.Interfaces;
 using GameBackend.Services.Identity.API.Application.Services;
 using GameBackend.Services.Identity.API.Domain;
+using GameBackend.Services.Identity.API.Domain.ValueObjects;
+using GameBackend.Services.Identity.API.Infrastructure.Configuration;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
 using GameBackend.SharedKernel.Application;
 
@@ -15,6 +17,7 @@ public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand, st
     private readonly PasswordHasher _hasher;
     private readonly JwtTokenGenerator _jwt;
     private readonly WelcomeGiftFulfiller _welcomeGift;
+    private readonly EconomySettings _economy;
 
     /// <summary>
     /// Инициализирует обработчик зависимостями.
@@ -23,16 +26,19 @@ public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand, st
     /// <param name="hasher">Хешер паролей.</param>
     /// <param name="jwt">Генератор JWT.</param>
     /// <param name="welcomeGift">Выдача приветственного подарка.</param>
+    /// <param name="economy">Игровые экономические параметры.</param>
     public RegisterCommandHandler(
         IPlayerRepository repository,
         PasswordHasher hasher,
         JwtTokenGenerator jwt,
-        WelcomeGiftFulfiller welcomeGift)
+        WelcomeGiftFulfiller welcomeGift,
+        EconomySettings economy)
     {
         _repository = repository;
         _hasher = hasher;
         _jwt = jwt;
         _welcomeGift = welcomeGift;
+        _economy = economy;
     }
 
     /// <summary>
@@ -51,7 +57,7 @@ public sealed class RegisterCommandHandler : ICommandHandler<RegisterCommand, st
 
         var passwordHash = _hasher.Hash(command.Password);
 
-        var player = Player.Register(command.Nickname, command.Email, passwordHash);
+        var player = Player.Register(command.Nickname, command.Email, passwordHash, new GoldCredits(_economy.StartingBalance));
 
         await _repository.SaveAsync(player, cancellationToken);
 

@@ -12,8 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Identity.API.Tests;
 
-// NOTE: SQLite, not EF InMemory — InMemory mishandles the inventory
-// PrimitiveCollection and 500s on register.
 public class AuthenticationIntegrationTests : WebApplicationFactory<Program>
 {
     // NOTE: valid key must come via env var — Program.cs reads config before
