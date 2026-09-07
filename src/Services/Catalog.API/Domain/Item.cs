@@ -50,6 +50,11 @@ public sealed class Item : AggregateRoot
     public Guid? OwnerId { get; private set; }
 
     /// <summary>
+    /// Дата и время создания карточки (UTC) — по ней определяется, когда витрину пора пополнять.
+    /// </summary>
+    public DateTime CreatedAt { get; private set; }
+
+    /// <summary>
     /// Инициализирует новую каталожную карточку предмета.
     /// </summary>
     /// <param name="name">Название предмета.</param>
@@ -79,6 +84,7 @@ public sealed class Item : AggregateRoot
         StartingPrice = startingPrice;
         Stock = stock;
         OwnerId = ownerId;
+        CreatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new ItemCreated(Id, Name, StartingPrice));
     }

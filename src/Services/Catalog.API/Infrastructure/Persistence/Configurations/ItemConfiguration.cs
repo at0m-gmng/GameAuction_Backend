@@ -23,6 +23,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(x => x.Description).HasMaxLength(2000);
         builder.Property(x => x.ImageUrl).HasMaxLength(2000);
         builder.Property(x => x.StartingPrice).HasPrecision(18, 2);
+        builder.Property(x => x.CreatedAt).IsRequired();
 
         // Редкость храним как число (int), чтобы корректно работал фильтр ">="
         // (сравнение идёт по числовому значению, а не по строке).

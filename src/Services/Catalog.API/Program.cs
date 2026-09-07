@@ -1,6 +1,8 @@
 using GameBackend.Services.Catalog.API.Application.Commands;
 using GameBackend.Services.Catalog.API.Application.Interfaces;
 using GameBackend.Services.Catalog.API.Application.Queries;
+using GameBackend.Services.Catalog.API.Infrastructure.Configuration;
+using GameBackend.Services.Catalog.API.Infrastructure.ExternalServices;
 using GameBackend.Services.Catalog.API.Infrastructure.Persistence;
 using GameBackend.Services.Catalog.API.Infrastructure.Persistence.Repositories;
 using GameBackend.SharedKernel.Security;
@@ -44,6 +46,22 @@ if (string.IsNullOrWhiteSpace(internalApiKey))
     throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
 
 builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
+
+var generationBaseUrl = builder.Configuration["InternalApi:GenerationBaseUrl"];
+if (string.IsNullOrWhiteSpace(generationBaseUrl))
+    throw new InvalidOperationException("InternalApi:GenerationBaseUrl не задан.");
+
+builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(generationBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(5);
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+});
+
+var marketplaceSettings = builder.Configuration.GetSection(MarketplaceSettings.SectionName).Get<MarketplaceSettings>()
+    ?? new MarketplaceSettings();
+builder.Services.AddSingleton(marketplaceSettings);
+builder.Services.AddScoped<GeneratePublicItemCommandHandler>();
 
 // NOTE: Issuer/Audience/SecretKey должны совпадать с Identity.API — токены подписывает он.
 const int HmacSha256MinKeyBytes = 32;
@@ -98,7 +116,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
-    await CatalogDbInitializer.SeedAsync(db);
+    var generatePublicItem = scope.ServiceProvider.GetRequiredService<GeneratePublicItemCommandHandler>();
+    await CatalogDbInitializer.SeedAsync(db, generatePublicItem, marketplaceSettings);
 }
 
 if (app.Environment.IsDevelopment())
