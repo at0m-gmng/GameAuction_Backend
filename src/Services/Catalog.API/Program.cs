@@ -45,10 +45,32 @@ if (string.IsNullOrWhiteSpace(internalApiKey))
 
 builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
 
-var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
-if (jwtSettings is not null)
-{
-    builder.Services.AddAuthentication(options =>
+// NOTE: Catalog.API only validates tokens — it never issues them — but it
+// must agree byte-for-byte with Identity.API on Issuer/Audience/SecretKey,
+// since that's the service that signs them. Config here comes purely from
+// env vars (no Jwt section in this service's appsettings.json), so a missing
+// or mismatched Jwt__* on this specific service is invisible until someone
+// hits an authenticated endpoint — hence fail-fast instead of the old silent
+// "if not null" skip, which let every request 401 with no trace anywhere.
+const int HmacSha256MinKeyBytes = 32;
+
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
+    ?? throw new InvalidOperationException(
+        $"Конфигурация JWT отсутствует: секция '{JwtSettings.SectionName}' не найдена.");
+
+if (string.IsNullOrWhiteSpace(jwtSettings.Issuer))
+    throw new InvalidOperationException("Jwt:Issuer не задан.");
+if (string.IsNullOrWhiteSpace(jwtSettings.Audience))
+    throw new InvalidOperationException("Jwt:Audience не задан.");
+if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey))
+    throw new InvalidOperationException("Jwt:SecretKey не задан — установите переменную окружения Jwt__SecretKey.");
+if (Encoding.UTF8.GetByteCount(jwtSettings.SecretKey) < HmacSha256MinKeyBytes)
+    throw new InvalidOperationException($"Jwt:SecretKey слишком короткий для HS256: нужно минимум {HmacSha256MinKeyBytes} байт.");
+
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey));
+
+builder.Services
+    .AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -63,13 +85,27 @@ if (jwtSettings is not null)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings.Issuer,
             ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
-            ClockSkew = TimeSpan.Zero
+            IssuerSigningKey = signingKey,
+            ClockSkew = TimeSpan.Zero,
+        };
+
+        // NOTE: TEMPORARY diagnostics for this specific 401 investigation —
+        // remove once confirmed fixed. Shows the *live* validation params at
+        // the moment a real request fails, instead of guessing from source.
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                var tvp = context.Options.TokenValidationParameters;
+                Console.WriteLine(
+                    $"JWT-DIAG Catalog OnAuthenticationFailed: exception={context.Exception.GetType().Name} " +
+                    $"message=\"{context.Exception.Message}\" ValidIssuer='{tvp.ValidIssuer}' ValidAudience='{tvp.ValidAudience}'");
+                return Task.CompletedTask;
+            },
         };
     });
 
-    builder.Services.AddAuthorization();
-}
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
