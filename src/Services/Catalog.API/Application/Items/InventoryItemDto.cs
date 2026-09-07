@@ -11,6 +11,7 @@ namespace GameBackend.Services.Catalog.API.Application.Items;
 /// <param name="Category">Категория.</param>
 /// <param name="Rarity">Редкость.</param>
 /// <param name="ImageUrl">Ссылка на изображение.</param>
+/// <param name="StartingPrice">Базовая цена предмета в каталоге.</param>
 /// <param name="Quantity">Количество копий в инвентаре.</param>
 /// <param name="AcquiredAt">Дата первой покупки (UTC).</param>
 public sealed record InventoryItemDto(
@@ -20,5 +21,6 @@ public sealed record InventoryItemDto(
     ItemCategory Category,
     ItemRarity Rarity,
     string? ImageUrl,
+    decimal StartingPrice,
     int Quantity,
     DateTime AcquiredAt);

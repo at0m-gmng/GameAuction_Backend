@@ -48,6 +48,7 @@ public sealed class GetInventoryQueryHandler : IQueryHandler<GetInventoryQuery, 
                     item.Category,
                     item.Rarity,
                     item.ImageUrl,
+                    item.StartingPrice,
                     x.Quantity,
                     x.AcquiredAt);
             })

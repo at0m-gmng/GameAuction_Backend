@@ -37,24 +37,35 @@ public sealed class GrantItemCommandHandler : ICommandHandler<GrantItemCommand, 
         // NOTE: Item и InventoryItem сохраняются через два независимых репозитория,
         // каждый со своим SaveChangesAsync — без явной транзакции сбой на втором
         // шаге оставил бы висячую карточку предмета без владельца.
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        //
+        // CatalogDbContext настроен с EnableRetryOnFailure, поэтому вручную открыть
+        // транзакцию через BeginTransactionAsync нельзя — EF Core это запрещает
+        // (при ретрае пришлось бы повторять весь блок, а не отдельный запрос).
+        // Обязательный паттерн для сочетания retry-стратегии с транзакцией —
+        // выполнить её через CreateExecutionStrategy().
+        var strategy = _context.Database.CreateExecutionStrategy();
 
-        var item = Item.CreateOwned(
-            command.PlayerId,
-            command.Name,
-            command.Description,
-            command.Category,
-            command.Rarity,
-            command.ImageUrl,
-            command.StartingPrice);
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
-        await _itemRepository.SaveAsync(item, cancellationToken);
+            var item = Item.CreateOwned(
+                command.PlayerId,
+                command.Name,
+                command.Description,
+                command.Category,
+                command.Rarity,
+                command.ImageUrl,
+                command.StartingPrice);
 
-        var inventoryItem = InventoryItem.Create(command.PlayerId, item.Id);
-        await _inventoryRepository.SaveAsync(inventoryItem, cancellationToken);
+            await _itemRepository.SaveAsync(item, cancellationToken);
 
-        await transaction.CommitAsync(cancellationToken);
+            var inventoryItem = InventoryItem.Create(command.PlayerId, item.Id);
+            await _inventoryRepository.SaveAsync(inventoryItem, cancellationToken);
 
-        return item.Id;
+            await transaction.CommitAsync(cancellationToken);
+
+            return item.Id;
+        });
     }
 }

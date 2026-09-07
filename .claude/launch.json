@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "nexus-dev",
+      "runtimeExecutable": "D:\\Projects\\GameBackend\\.claude\\run-nexus-dev.bat",
+      "runtimeArgs": [],
+      "port": 8443,
+      "autoPort": true
+    }
+  ]
+}
