@@ -7,8 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace GameBackend.Services.Catalog.API.Application.Commands;
 
 /// <summary>
-/// Обработчик выдачи приватного предмета: создаёт карточку предмета
-/// и сразу добавляет её во владение игроку — атомарно, одной транзакцией.
+/// Обработчик выдачи приватного предмета: создаёт карточку и сразу отдаёт её игроку, атомарно.
 /// </summary>
 public sealed class GrantItemCommandHandler : ICommandHandler<GrantItemCommand, Guid>
 {
@@ -34,15 +33,7 @@ public sealed class GrantItemCommandHandler : ICommandHandler<GrantItemCommand, 
 
     public async Task<Guid> Handle(GrantItemCommand command, CancellationToken cancellationToken)
     {
-        // NOTE: Item и InventoryItem сохраняются через два независимых репозитория,
-        // каждый со своим SaveChangesAsync — без явной транзакции сбой на втором
-        // шаге оставил бы висячую карточку предмета без владельца.
-        //
-        // CatalogDbContext настроен с EnableRetryOnFailure, поэтому вручную открыть
-        // транзакцию через BeginTransactionAsync нельзя — EF Core это запрещает
-        // (при ретрае пришлось бы повторять весь блок, а не отдельный запрос).
-        // Обязательный паттерн для сочетания retry-стратегии с транзакцией —
-        // выполнить её через CreateExecutionStrategy().
+        // NOTE: CreateExecutionStrategy обязателен — EnableRetryOnFailure запрещает голый BeginTransactionAsync.
         var strategy = _context.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>

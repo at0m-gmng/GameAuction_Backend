@@ -5,8 +5,6 @@ namespace GameBackend.Services.Catalog.API.Application.Commands;
 
 /// <summary>
 /// Команда выдачи приватного предмета игроку (например, приветственного подарка).
-/// Вызывается только другими сервисами backend'а. Возвращает идентификатор
-/// созданной карточки предмета.
 /// </summary>
 /// <param name="PlayerId">Идентификатор игрока-получателя.</param>
 /// <param name="Name">Название предмета.</param>

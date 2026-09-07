@@ -3,8 +3,7 @@ using System.Net.Http.Json;
 namespace GameBackend.Services.Identity.API.Infrastructure.ExternalServices;
 
 /// <summary>
-/// HTTP-реализация клиента к Catalog.API. BaseAddress и заголовок
-/// X-Internal-Key настраиваются при регистрации HttpClient в Program.cs.
+/// HTTP-клиент к Catalog.API; BaseAddress и X-Internal-Key настраиваются в Program.cs.
 /// </summary>
 public sealed class CatalogServiceClient : ICatalogServiceClient
 {

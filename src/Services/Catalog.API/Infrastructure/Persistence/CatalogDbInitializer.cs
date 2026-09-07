@@ -21,11 +21,7 @@ public static class CatalogDbInitializer
         // Для production предпочтительны миграции; здесь — простой путь для демо.
         await context.Database.EnsureCreatedAsync(cancellationToken);
 
-        // NOTE: EnsureCreated не доливает колонки в уже существующую БД. Патч
-        // идемпотентен (IF NOT EXISTS) — безопасен и на новой, и на старой БД.
-        // Синтаксис специфичен для Postgres — на других провайдерах (например,
-        // SQLite в интеграционных тестах) EnsureCreated уже создаёт колонку из
-        // модели, отдельный патч там не нужен и упал бы на синтаксисе.
+        // NOTE: EnsureCreated не доливает колонки в старую БД — патч идемпотентен, только для Postgres.
         if (context.Database.IsNpgsql())
         {
             await context.Database.ExecuteSqlRawAsync(

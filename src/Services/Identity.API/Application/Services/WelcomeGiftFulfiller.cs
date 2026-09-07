@@ -5,10 +5,7 @@ using GameBackend.Services.Identity.API.Infrastructure.ExternalServices;
 namespace GameBackend.Services.Identity.API.Application.Services;
 
 /// <summary>
-/// Выдаёт игроку приветственный подарочный предмет, если он ещё не выдан.
-/// Вызывается и при регистрации, и при входе — если Generation.API или
-/// Catalog.API были недоступны при регистрации, подарок довыдаётся при
-/// следующем успешном входе.
+/// Выдаёт игроку приветственный подарок, если он ещё не выдан; вызывается при регистрации и входе.
 /// </summary>
 public sealed class WelcomeGiftFulfiller
 {
@@ -30,8 +27,7 @@ public sealed class WelcomeGiftFulfiller
     }
 
     /// <summary>
-    /// Пытается выдать подарок, если он ещё не выдан. Никогда не бросает
-    /// исключение наружу — выдача подарка не должна ломать регистрацию/вход.
+    /// Пытается выдать подарок; никогда не бросает исключение наружу.
     /// </summary>
     /// <param name="player">Игрок-получатель.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -50,8 +46,7 @@ public sealed class WelcomeGiftFulfiller
         }
         catch (Exception ex)
         {
-            // NOTE: best-effort — Generation.API/Catalog.API недоступны, значит
-            // просто пробуем ещё раз при следующем входе (см. WelcomeGiftGranted).
+            // NOTE: best-effort — попытка повторится при следующем успешном входе.
             _logger.LogWarning(ex, "Не удалось выдать приветственный подарок игроку {PlayerId}", player.Id);
         }
     }

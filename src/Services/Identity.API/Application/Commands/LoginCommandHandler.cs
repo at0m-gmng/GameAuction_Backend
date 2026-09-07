@@ -10,11 +10,7 @@ namespace GameBackend.Services.Identity.API.Application.Commands;
 /// </summary>
 public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
 {
-    // NOTE: valid-format (salt.hash) but not the hash of any real password.
-    // Used when the player isn't found, so PasswordHasher.Verify always runs
-    // its full PBKDF2 pass — otherwise a missing player short-circuits before
-    // hashing while a wrong password doesn't, and the timing difference lets
-    // an attacker enumerate registered emails.
+    // NOTE: фиктивный хеш — заставляет Verify всегда делать PBKDF2-проход (анти-timing-атака на email).
     private const string DummyPasswordHash =
         "AAAAAAAAAAAAAAAAAAAAAA==.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 

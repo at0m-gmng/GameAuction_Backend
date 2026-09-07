@@ -4,14 +4,11 @@ using System.Text.Json;
 namespace GameBackend.Services.Identity.API.Infrastructure.ExternalServices;
 
 /// <summary>
-/// HTTP-реализация клиента к Generation.API. BaseAddress и заголовок
-/// X-Internal-Key настраиваются при регистрации HttpClient в Program.cs.
+/// HTTP-клиент к Generation.API; BaseAddress и X-Internal-Key настраиваются в Program.cs.
 /// </summary>
 public sealed class GenerationServiceClient : IGenerationServiceClient
 {
-    // NOTE: ASP.NET Core сериализует ответ в camelCase, а ReadFromJsonAsync (в
-    // отличие от серверного [FromBody]-биндинга) по умолчанию регистрозависим —
-    // без этой опции все поля молча придут пустыми.
+    // NOTE: ReadFromJsonAsync регистрозависим по умолчанию — без опции camelCase-поля придут пустыми.
     private static readonly JsonSerializerOptions ResponseOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly HttpClient _httpClient;

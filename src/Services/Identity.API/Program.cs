@@ -53,8 +53,7 @@ var catalogBaseUrl = builder.Configuration["InternalApi:CatalogBaseUrl"];
 if (string.IsNullOrWhiteSpace(catalogBaseUrl))
     throw new InvalidOperationException("InternalApi:CatalogBaseUrl не задан.");
 
-// NOTE: короткий таймаут — недоступность Generation.API/Catalog.API не должна
-// заметно задерживать регистрацию/вход (см. WelcomeGiftFulfiller).
+// NOTE: короткий таймаут — недоступность Generation/Catalog.API не должна задерживать вход.
 var internalApiTimeout = TimeSpan.FromSeconds(5);
 
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
@@ -132,12 +131,7 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     db.Database.EnsureCreated();
 
-    // NOTE: EnsureCreated только создаёт схему на пустой БД — на уже существующей
-    // (как на проде) новые колонки модели сами не появятся. Патч идемпотентен:
-    // IF NOT EXISTS безопасен и на свежесозданной, и на старой БД, при каждом старте.
-    // Синтаксис ADD COLUMN IF NOT EXISTS специфичен для Postgres — на других
-    // провайдерах (например, SQLite в интеграционных тестах) он не нужен и
-    // не должен выполняться: там EnsureCreated уже создаёт колонку из модели.
+    // NOTE: EnsureCreated не доливает колонки в старую БД — патч идемпотентен, только для Postgres.
     if (db.Database.IsNpgsql())
         db.Database.ExecuteSqlRaw(
             """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "WelcomeGiftGranted" boolean NOT NULL DEFAULT false;""");

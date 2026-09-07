@@ -2,8 +2,7 @@ using GameBackend.SharedKernel.Domain;
 
 namespace GameBackend.Services.Identity.API.Infrastructure.ExternalServices;
 
-// NOTE: форма записи должна совпадать с Catalog.API.Controllers.GrantItemRequest —
-// сервисы не делятся общей сборкой контрактов, синхронизация ручная.
+// NOTE: форма должна совпадать с Catalog.API.GrantItemRequest — синхронизация вручную.
 
 /// <summary>
 /// Запрос на выдачу приватного предмета в Catalog.API.

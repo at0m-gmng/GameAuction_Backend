@@ -45,13 +45,7 @@ if (string.IsNullOrWhiteSpace(internalApiKey))
 
 builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
 
-// NOTE: Catalog.API only validates tokens — it never issues them — but it
-// must agree byte-for-byte with Identity.API on Issuer/Audience/SecretKey,
-// since that's the service that signs them. Config here comes purely from
-// env vars (no Jwt section in this service's appsettings.json), so a missing
-// or mismatched Jwt__* on this specific service is invisible until someone
-// hits an authenticated endpoint — hence fail-fast instead of the old silent
-// "if not null" skip, which let every request 401 with no trace anywhere.
+// NOTE: Issuer/Audience/SecretKey должны совпадать с Identity.API — токены подписывает он.
 const int HmacSha256MinKeyBytes = 32;
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()

@@ -41,8 +41,7 @@ public sealed class Player : AggregateRoot
     /// </summary>
     public DateTime CreatedAt { get; private set; }
 
-    // TODO: не используется — реальный инвентарь ведётся в Catalog.API
-    // (Item + InventoryItem). Убрать это поле или решить, зачем оно нужно здесь.
+    // TODO: неиспользуемое поле — реальный инвентарь теперь в Catalog.API (Item + InventoryItem).
     private readonly List<Guid> _inventory = new();
 
     /// <summary>

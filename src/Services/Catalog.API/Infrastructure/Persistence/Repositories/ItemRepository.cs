@@ -58,8 +58,7 @@ public class ItemRepository : IItemRepository
         int take,
         CancellationToken cancellationToken = default)
     {
-        // NOTE: приватные предметы (OwnerId != null, например подарки) никогда
-        // не должны попадать в публичную витрину — только в инвентарь владельца.
+        // NOTE: приватные предметы (OwnerId != null) не должны попадать в публичную витрину.
         var query = _context.Items.Where(x => x.OwnerId == null);
 
         if (category.HasValue)
