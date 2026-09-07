@@ -31,10 +31,8 @@ public class PlayerConfiguration : IEntityTypeConfiguration<Player>
         builder.Property(x => x.WelcomeGiftGranted).IsRequired();
         builder.Property(x => x.StartingBalanceGranted).IsRequired();
 
-        // Уникальный индекс по нормализованному email для быстрого поиска и уникальности.
         builder.HasIndex(x => x.NormalizedEmail).IsUnique();
 
-        // GoldCredits — owned type (value object).
         builder.OwnsOne(x => x.Balance, balance =>
         {
             balance.Property(x => x.Amount).HasColumnName("BalanceAmount");

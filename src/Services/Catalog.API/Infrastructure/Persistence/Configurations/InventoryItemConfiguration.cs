@@ -22,10 +22,9 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
         builder.Property(x => x.Quantity).IsRequired();
         builder.Property(x => x.AcquiredAt).IsRequired();
 
-        // У игрока ровно одна строка на тип предмета.
+        // NOTE: уникальный индекс — у игрока ровно одна строка на тип предмета, остальное через Quantity.
         builder.HasIndex(x => new { x.PlayerId, x.ItemId }).IsUnique();
 
-        // Доменные события не сохраняются в БД.
         builder.Ignore(x => x.DomainEvents);
     }
 }

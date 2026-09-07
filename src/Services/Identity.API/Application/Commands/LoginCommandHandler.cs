@@ -63,7 +63,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
 
         await _welcomeGift.EnsureGrantedAsync(player, cancellationToken);
 
-        // Довыдача для игроков, зарегистрированных до появления стартового баланса.
+        // NOTE: довыдача для игроков, зарегистрированных до появления стартового баланса.
         if (player.GrantStartingBalanceIfNeeded(new GoldCredits(_economy.StartingBalance)))
             await _repository.SaveAsync(player, cancellationToken);
 

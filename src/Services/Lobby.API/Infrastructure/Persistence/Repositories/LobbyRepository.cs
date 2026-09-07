@@ -67,8 +67,7 @@ public class LobbyRepository : ILobbyRepository
         if (events.Length == 0)
             return;
 
-        // События рассылаются ТОЛЬКО после успешного сохранения:
-        // клиенты не должны получать факт, который не заперсистился.
+        // NOTE: события рассылаются только после сохранения — иначе клиент узнает о том, что не заперсистилось.
         lobby.ClearDomainEvents();
         await _dispatcher.DispatchAsync(events, cancellationToken);
     }

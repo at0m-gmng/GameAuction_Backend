@@ -10,9 +10,7 @@ namespace GameBackend.Services.Catalog.API.Infrastructure.Persistence;
 public static class CatalogDbInitializer
 {
     /// <summary>
-    /// Создаёт схему БД и генерирует публичные предметы витрины через Generation.API —
-    /// с нуля, если витрина пуста, или добавляет партию, если прошлое пополнение
-    /// было больше <see cref="MarketplaceSettings.RestockIntervalHours"/> назад.
+    /// Создаёт схему БД и генерирует публичные предметы витрины, если пора.
     /// </summary>
     /// <param name="context">Контекст базы данных.</param>
     /// <param name="generatePublicItem">Обработчик генерации одного публичного предмета.</param>
@@ -24,8 +22,7 @@ public static class CatalogDbInitializer
         MarketplaceSettings marketplace,
         CancellationToken cancellationToken = default)
     {
-        // Создаёт схему из модели, если БД ещё нет.
-        // Для production предпочтительны миграции; здесь — простой путь для демо.
+        // NOTE: EnsureCreated вместо миграций — упрощение для демо-проекта.
         await context.Database.EnsureCreatedAsync(cancellationToken);
 
         // NOTE: EnsureCreated не доливает колонки в старую БД — патч идемпотентен, только для Postgres.

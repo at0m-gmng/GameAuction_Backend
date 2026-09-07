@@ -39,8 +39,7 @@ builder.Services.AddDbContext<IdentityDbContext>(options =>
 
 builder.Services.AddSingleton<PasswordHasher>();
 
-// Не fail-fast: отсутствие секции просто означает StartingBalance = 0, а не
-// сломанный сервис — это игровой параметр, а не секрет вроде Jwt:SecretKey.
+// NOTE: не fail-fast — это игровой параметр, а не секрет; отсутствие секции даёт StartingBalance = 0.
 var economySettings = builder.Configuration.GetSection(EconomySettings.SectionName).Get<EconomySettings>()
     ?? new EconomySettings();
 builder.Services.AddSingleton(economySettings);
@@ -144,9 +143,7 @@ using (var scope = app.Services.CreateScope())
         db.Database.ExecuteSqlRaw(
             """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "WelcomeGiftGranted" boolean NOT NULL DEFAULT false;""");
 
-        // NOTE: DEFAULT false здесь — это и есть бэкфилл: игроки, зарегистрированные
-        // до появления стартового баланса, получают false и дополучат его при
-        // следующем логине через Player.GrantStartingBalanceIfNeeded.
+        // NOTE: DEFAULT false — бэкфилл; старые игроки дополучат баланс при следующем логине.
         db.Database.ExecuteSqlRaw(
             """ALTER TABLE "Players" ADD COLUMN IF NOT EXISTS "StartingBalanceGranted" boolean NOT NULL DEFAULT false;""");
 

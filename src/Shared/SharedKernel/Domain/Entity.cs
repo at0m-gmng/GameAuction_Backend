@@ -27,7 +27,6 @@ public abstract class Entity
     /// </summary>
     protected Entity()
     {
-        // Конструктор нужен для того, чтобы EF Core мог создавать объекты при чтении из БД
     }
 
     /// <summary>

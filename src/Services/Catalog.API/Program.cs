@@ -89,11 +89,7 @@ builder.Services
     })
     .AddJwtBearer(options =>
     {
-        // Без этого JwtBearerHandler по умолчанию переименовывает входящий
-        // claim "sub" в легаси-URI ClaimTypes.NameIdentifier, из-за чего
-        // User.FindFirst("sub") в CatalogController всегда возвращал null,
-        // а инвентарь — 401 без единого исключения в логах (валидация токена
-        // проходила успешно, отказ происходил уже в контроллере).
+        // NOTE: без этого JwtBearerHandler молча переименовывает claim "sub" в легаси ClaimTypes.NameIdentifier.
         options.MapInboundClaims = false;
 
         options.TokenValidationParameters = new TokenValidationParameters

@@ -25,22 +25,16 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(x => x.StartingPrice).HasPrecision(18, 2);
         builder.Property(x => x.CreatedAt).IsRequired();
 
-        // Редкость храним как число (int), чтобы корректно работал фильтр ">="
-        // (сравнение идёт по числовому значению, а не по строке).
+        // NOTE: Rarity — int, а не enum-строка, чтобы фильтр ">=" сравнивал значения, а не строки.
         builder.Property(x => x.Rarity).IsRequired();
 
-        // Категория сравнивается только на равенство, поэтому строка допустима
-        // и делает данные читаемыми в БД.
+        // NOTE: Category — строка (сравнивается только на равенство), для читаемости в БД.
         builder.Property(x => x.Category).HasConversion<string>().HasMaxLength(50);
 
-        // Индексы ускоряют фильтрацию по категории и редкости.
         builder.HasIndex(x => x.Category);
         builder.HasIndex(x => x.Rarity);
-
-        // Индекс по владельцу — по нему ищутся приватные предметы конкретного игрока.
         builder.HasIndex(x => x.OwnerId);
 
-        // Доменные события живут только в памяти и не сохраняются в БД.
         builder.Ignore(x => x.DomainEvents);
     }
 }

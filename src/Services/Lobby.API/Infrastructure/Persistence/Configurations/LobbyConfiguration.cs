@@ -31,12 +31,11 @@ public class LobbyConfiguration : IEntityTypeConfiguration<LobbyAggregate>
         builder.Property(x => x.Status).IsRequired();
         builder.Property(x => x.MaxParticipants).IsRequired();
 
-        // Участники — массив uuid[] в PostgreSQL (primitive collection).
+        // NOTE: участники — массив uuid[] в PostgreSQL, а не отдельная таблица.
         builder.Ignore(x => x.Participants);
         builder.PrimitiveCollection<List<Guid>>("_participants")
             .HasColumnName("Participants");
 
-        // Ставки — дочерняя коллекция в отдельной таблице.
         builder.OwnsMany(x => x.Bids, bids =>
         {
             bids.ToTable("Bids");
@@ -47,10 +46,9 @@ public class LobbyConfiguration : IEntityTypeConfiguration<LobbyAggregate>
             bids.Property(x => x.PlacedAt).IsRequired();
         });
 
-        // Вычисляемое — не персистим.
+        // NOTE: CurrentBid вычисляется из Bids, отдельно не персистим.
         builder.Ignore(x => x.CurrentBid);
 
-        // Индекс ускоряет выборку открытых лобби.
         builder.HasIndex(x => x.Status);
     }
 }

@@ -31,7 +31,6 @@ public abstract class AggregateRoot : Entity
     /// </summary>
     protected AggregateRoot()
     {
-        // Конструктор нужен для того, чтобы EF Core мог создавать объекты при чтении из БД
     }
 
     /// <summary>
