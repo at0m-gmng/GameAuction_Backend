@@ -138,6 +138,18 @@ public sealed class LobbyAggregate : AggregateRoot
     }
 
     /// <summary>
+    /// Убирает игрока из лобби, освобождая его слот. Не ошибка, если игрока там не было.
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    public void Leave(Guid playerId)
+    {
+        if (!_participants.Remove(playerId))
+            return;
+
+        AddDomainEvent(new PlayerLeftLobby(Id, playerId, _participants.Count));
+    }
+
+    /// <summary>
     /// Запускает аукцион. Переводит лобби в статус Bidding и устанавливает таймер.
     /// </summary>
     /// <param name="duration">Длительность аукциона.</param>

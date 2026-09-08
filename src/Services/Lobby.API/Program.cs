@@ -45,6 +45,7 @@ builder.Services.AddScoped<IDomainEventDispatcher, SignalRDomainEventDispatcher>
 
 builder.Services.AddScoped<CreateLobbyCommandHandler>();
 builder.Services.AddScoped<JoinLobbyCommandHandler>();
+builder.Services.AddScoped<LeaveLobbyCommandHandler>();
 builder.Services.AddScoped<PlaceBidCommandHandler>();
 builder.Services.AddScoped<AuctionCompletionService>();
 builder.Services.AddScoped<GetOpenLobbiesQueryHandler>();

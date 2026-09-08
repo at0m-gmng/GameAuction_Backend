@@ -28,6 +28,7 @@ public sealed class LobbyController : ControllerBase
 {
     private readonly CreateLobbyCommandHandler _create;
     private readonly JoinLobbyCommandHandler _join;
+    private readonly LeaveLobbyCommandHandler _leave;
     private readonly PlaceBidCommandHandler _placeBid;
     private readonly GetOpenLobbiesQueryHandler _openLobbies;
     private readonly GetLobbyQueryHandler _getLobby;
@@ -39,6 +40,7 @@ public sealed class LobbyController : ControllerBase
     public LobbyController(
         CreateLobbyCommandHandler create,
         JoinLobbyCommandHandler join,
+        LeaveLobbyCommandHandler leave,
         PlaceBidCommandHandler placeBid,
         GetOpenLobbiesQueryHandler openLobbies,
         GetLobbyQueryHandler getLobby,
@@ -46,6 +48,7 @@ public sealed class LobbyController : ControllerBase
     {
         _create = create;
         _join = join;
+        _leave = leave;
         _placeBid = placeBid;
         _openLobbies = openLobbies;
         _getLobby = getLobby;
@@ -108,6 +111,27 @@ public sealed class LobbyController : ControllerBase
         try
         {
             await _join.Handle(new JoinLobbyCommand(id, playerId.Value), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Убирает вызывающего игрока из лобби, освобождая слот. Требует JWT-токен.
+    /// </summary>
+    [Authorize]
+    [HttpPost("{id:guid}/leave")]
+    public async Task<IActionResult> Leave(Guid id, CancellationToken ct = default)
+    {
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        try
+        {
+            await _leave.Handle(new LeaveLobbyCommand(id, playerId.Value), ct);
             return NoContent();
         }
         catch (InvalidOperationException ex)

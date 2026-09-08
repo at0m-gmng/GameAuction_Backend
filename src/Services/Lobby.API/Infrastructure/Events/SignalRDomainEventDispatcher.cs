@@ -56,6 +56,11 @@ public sealed class SignalRDomainEventDispatcher : IDomainEventDispatcher
                     await _hub.Clients.Group(LobbyHub.GroupName(expired.LobbyId))
                         .SendAsync("RoundExpiredWithoutBids", expired, cancellationToken);
                     break;
+
+                case PlayerLeftLobby left:
+                    await _hub.Clients.Group(LobbyHub.GroupName(left.LobbyId))
+                        .SendAsync("PlayerLeftLobby", left, cancellationToken);
+                    break;
             }
         }
     }
