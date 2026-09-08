@@ -1,6 +1,7 @@
 ﻿using GameBackend.Services.Lobby.API.Application.Commands;
 using GameBackend.Services.Lobby.API.Application.Lobbies;
 using GameBackend.Services.Lobby.API.Application.Queries;
+using GameBackend.SharedKernel.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
@@ -18,11 +19,8 @@ public sealed record CreateLobbyRequest(
 /// <summary>Контракт запроса на ставку.</summary>
 public sealed record PlaceBidRequest(decimal Amount);
 
-/// <summary>Контракт запроса на запуск аукциона.</summary>
-public sealed record StartAuctionRequest(int DurationSeconds);
-
 /// <summary>
-/// Эндпоинты лобби: список, детали, создание, присоединение, ставки, жизненный цикл аукциона.
+/// Эндпоинты лобби: список, детали, создание, присоединение, ставки; старт и завершение — автоматические.
 /// </summary>
 [ApiController]
 [Route("api/lobbies")]
@@ -30,11 +28,10 @@ public sealed class LobbyController : ControllerBase
 {
     private readonly CreateLobbyCommandHandler _create;
     private readonly JoinLobbyCommandHandler _join;
-    private readonly StartAuctionCommandHandler _start;
     private readonly PlaceBidCommandHandler _placeBid;
-    private readonly CompleteAuctionCommandHandler _complete;
     private readonly GetOpenLobbiesQueryHandler _openLobbies;
     private readonly GetLobbyQueryHandler _getLobby;
+    private readonly IInternalCallerValidator _internalCallerValidator;
 
     /// <summary>
     /// Инициализирует контроллер обработчиками.
@@ -42,19 +39,17 @@ public sealed class LobbyController : ControllerBase
     public LobbyController(
         CreateLobbyCommandHandler create,
         JoinLobbyCommandHandler join,
-        StartAuctionCommandHandler start,
         PlaceBidCommandHandler placeBid,
-        CompleteAuctionCommandHandler complete,
         GetOpenLobbiesQueryHandler openLobbies,
-        GetLobbyQueryHandler getLobby)
+        GetLobbyQueryHandler getLobby,
+        IInternalCallerValidator internalCallerValidator)
     {
         _create = create;
         _join = join;
-        _start = start;
         _placeBid = placeBid;
-        _complete = complete;
         _openLobbies = openLobbies;
         _getLobby = getLobby;
+        _internalCallerValidator = internalCallerValidator;
     }
 
     /// <summary>
@@ -78,11 +73,14 @@ public sealed class LobbyController : ControllerBase
     }
 
     /// <summary>
-    /// Создаёт новое лобби для предмета.
+    /// Создаёт новое лобби для предмета; вызывается другими сервисами, не игроками — требует X-Internal-Key.
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<Guid>> CreateLobby([FromBody] CreateLobbyRequest request, CancellationToken ct = default)
     {
+        if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
+            return Unauthorized();
+
         var id = await _create.Handle(
             new CreateLobbyCommand(request.ItemId, request.ItemName, request.ItemImageUrl, request.StartingPrice, request.MaxParticipants),
             ct);
@@ -105,16 +103,6 @@ public sealed class LobbyController : ControllerBase
     }
 
     /// <summary>
-    /// Запускает аукцион в лобби.
-    /// </summary>
-    [HttpPost("{id:guid}/start")]
-    public async Task<IActionResult> Start(Guid id, [FromBody] StartAuctionRequest request, CancellationToken ct = default)
-    {
-        await _start.Handle(new StartAuctionCommand(id, TimeSpan.FromSeconds(request.DurationSeconds)), ct);
-        return NoContent();
-    }
-
-    /// <summary>
     /// Регистрирует ставку вызывающего игрока. Требует JWT-токен.
     /// </summary>
     [Authorize]
@@ -125,16 +113,6 @@ public sealed class LobbyController : ControllerBase
         if (playerId is null) return Unauthorized();
 
         await _placeBid.Handle(new PlaceBidCommand(id, playerId.Value, request.Amount), ct);
-        return NoContent();
-    }
-
-    /// <summary>
-    /// Завершает аукцион и определяет победителя.
-    /// </summary>
-    [HttpPost("{id:guid}/complete")]
-    public async Task<IActionResult> Complete(Guid id, CancellationToken ct = default)
-    {
-        await _complete.Handle(new CompleteAuctionCommand(id), ct);
         return NoContent();
     }
 

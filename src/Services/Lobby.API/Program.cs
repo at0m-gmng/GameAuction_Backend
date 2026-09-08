@@ -1,6 +1,7 @@
 using GameBackend.Services.Lobby.API.Application.Commands;
 using GameBackend.Services.Lobby.API.Application.Interfaces;
 using GameBackend.Services.Lobby.API.Application.Queries;
+using GameBackend.Services.Lobby.API.Application.Services;
 using GameBackend.Services.Lobby.API.Hubs;
 using GameBackend.Services.Lobby.API.Infrastructure.Events;
 using GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
@@ -43,15 +44,17 @@ builder.Services.AddScoped<IDomainEventDispatcher, SignalRDomainEventDispatcher>
 
 builder.Services.AddScoped<CreateLobbyCommandHandler>();
 builder.Services.AddScoped<JoinLobbyCommandHandler>();
-builder.Services.AddScoped<StartAuctionCommandHandler>();
 builder.Services.AddScoped<PlaceBidCommandHandler>();
-builder.Services.AddScoped<CompleteAuctionCommandHandler>();
+builder.Services.AddScoped<AuctionCompletionService>();
 builder.Services.AddScoped<GetOpenLobbiesQueryHandler>();
 builder.Services.AddScoped<GetLobbyQueryHandler>();
 
 var internalApiKey = builder.Configuration["InternalApi:Key"];
 if (string.IsNullOrWhiteSpace(internalApiKey))
     throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
+
+// NOTE: тот же ключ — и для исходящих вызовов (заголовок ниже), и для входящих проверок.
+builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
 
 var identityBaseUrl = builder.Configuration["InternalApi:IdentityBaseUrl"];
 if (string.IsNullOrWhiteSpace(identityBaseUrl))

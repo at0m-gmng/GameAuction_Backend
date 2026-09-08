@@ -8,6 +8,9 @@ namespace GameBackend.Services.Lobby.API.Application.Commands;
 /// </summary>
 public sealed class JoinLobbyCommandHandler : ICommandHandler<JoinLobbyCommand>
 {
+    // NOTE: сервис не имеет отдельного эндпоинта/UI для настройки длительности за лобби — фиксированное окно ставок.
+    private static readonly TimeSpan AuctionDuration = TimeSpan.FromMinutes(5);
+
     private readonly ILobbyRepository _repository;
 
     /// <summary>
@@ -20,7 +23,7 @@ public sealed class JoinLobbyCommandHandler : ICommandHandler<JoinLobbyCommand>
     }
 
     /// <summary>
-    /// Загружает лобби, добавляет игрока и сохраняет.
+    /// Загружает лобби, добавляет игрока, автоматически стартует аукцион при заполнении и сохраняет.
     /// </summary>
     /// <param name="command">Команда.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -30,6 +33,9 @@ public sealed class JoinLobbyCommandHandler : ICommandHandler<JoinLobbyCommand>
                     ?? throw new InvalidOperationException($"Лобби {command.LobbyId} не найдено");
 
         lobby.Join(command.PlayerId);
+
+        if (lobby.Participants.Count >= lobby.MaxParticipants)
+            lobby.StartAuction(AuctionDuration);
 
         await _repository.SaveAsync(lobby, cancellationToken);
     }

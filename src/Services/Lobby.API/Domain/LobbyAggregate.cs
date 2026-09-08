@@ -4,9 +4,7 @@ using GameBackend.Services.Lobby.API.Domain.Events;
 namespace GameBackend.Services.Lobby.API.Domain;
 
 /// <summary>
-/// Агрегат, представляющий игровое лобби — комнату, где собирается группа игроков
-/// и проходит живой аукцион за предмет. Объединяет матчмейкинг и аукцион в единый поток.
-/// Хранит денормализованный снапшот витринных данных предмета для быстрых чтений.
+/// Агрегат лобби: комната сбора игроков и живой аукцион за предмет, объединяет матчмейкинг и торги.
 /// </summary>
 public sealed class LobbyAggregate : AggregateRoot
 {
@@ -61,8 +59,7 @@ public sealed class LobbyAggregate : AggregateRoot
     public IReadOnlyCollection<Bid> Bids => _bids.AsReadOnly();
 
     /// <summary>
-    /// Текущая максимальная ставка. Null, если ставок ещё не было.
-    /// Вычисляется из истории ставок, не хранится отдельно.
+    /// Текущая максимальная ставка — null, если ставок не было; вычисляется из истории, не хранится отдельно.
     /// </summary>
     public Bid? CurrentBid => _bids.Count == 0 ? null : _bids.MaxBy(b => b.Amount);
 

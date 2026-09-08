@@ -4,8 +4,7 @@ using System.Text;
 namespace GameBackend.Services.Identity.API.Infrastructure.Security;
 
 /// <summary>
-/// Хеширование паролей с солью через PBKDF2.
-/// Встроен в .NET, не требует внешних пакетов.
+/// Хеширование паролей с солью через встроенный в .NET PBKDF2, без внешних пакетов.
 /// </summary>
 public sealed class PasswordHasher
 {

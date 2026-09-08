@@ -6,8 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace GameBackend.Services.Lobby.API.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// Реализация репозитория лобби на EF Core + PostgreSQL.
-/// После сохранения рассылает доменные события агрегата.
+/// Реализация репозитория лобби на EF Core + PostgreSQL — после сохранения рассылает доменные события.
 /// </summary>
 public class LobbyRepository : ILobbyRepository
 {

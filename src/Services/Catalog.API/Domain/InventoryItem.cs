@@ -3,8 +3,7 @@
 namespace GameBackend.Services.Catalog.API.Domain;
 
 /// <summary>
-/// Позиция инвентаря игрока: сколько копий какого предмета куплено.
-/// Одна строка на пару (игрок, предмет), количество растёт в Quantity.
+/// Позиция инвентаря игрока: одна строка на пару (игрок, предмет), количество растёт в Quantity.
 /// </summary>
 public sealed class InventoryItem : AggregateRoot
 {

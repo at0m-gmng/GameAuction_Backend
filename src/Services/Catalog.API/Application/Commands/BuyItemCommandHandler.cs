@@ -5,8 +5,7 @@ using GameBackend.SharedKernel.Application;
 namespace GameBackend.Services.Catalog.API.Application.Commands;
 
 /// <summary>
-/// Обработчик покупки предмета.
-/// Спишет остаток в каталоге и добавит позицию в инвентарь.
+/// Обработчик покупки предмета: спишет остаток в каталоге и добавит позицию в инвентарь.
 /// </summary>
 public sealed class BuyItemCommandHandler : ICommandHandler<BuyItemCommand>
 {

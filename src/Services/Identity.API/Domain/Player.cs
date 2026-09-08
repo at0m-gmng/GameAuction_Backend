@@ -4,9 +4,7 @@ using GameBackend.Services.Identity.API.Domain.ValueObjects;
 namespace GameBackend.Services.Identity.API.Domain;
 
 /// <summary>
-/// Агрегат, представляющий игрока в системе.
-/// Является фундаментом для аутентификации, баланса и инвентаря.
-/// Хранит хеш пароля, а не сам пароль, для безопасности.
+/// Агрегат игрока: аутентификация, баланс и инвентарь; хранит хеш пароля, а не сам пароль.
 /// </summary>
 public sealed class Player : AggregateRoot
 {
@@ -21,8 +19,7 @@ public sealed class Player : AggregateRoot
     public string Email { get; private set; } = default!;
 
     /// <summary>
-    /// Нормализованный email (lowercase) для поиска и уникальности.
-    /// Позволяет aBc@gmail.com и ABC@gmail.com быть одним игроком.
+    /// Нормализованный email (lowercase) для поиска и уникальности — регистр не создаёт разных игроков.
     /// </summary>
     public string NormalizedEmail { get; private set; } = default!;
 
@@ -110,8 +107,7 @@ public sealed class Player : AggregateRoot
     }
 
     /// <summary>
-    /// Списывает средства с баланса (например, при покупке).
-    /// Защищает правило: нельзя потратить больше, чем есть.
+    /// Списывает средства с баланса (например, при покупке) — нельзя потратить больше, чем есть.
     /// </summary>
     /// <param name="amount">Сумма для списания.</param>
     /// <exception cref="InvalidOperationException">Если средств недостаточно.</exception>
@@ -129,9 +125,7 @@ public sealed class Player : AggregateRoot
     }
 
     /// <summary>
-    /// Начисляет стартовый баланс, если он ещё не был начислен (для игроков,
-    /// зарегистрированных до появления этого параметра). Не переначисляет
-    /// тем, кто уже получил его — независимо от того, сколько они потратили.
+    /// Начисляет стартовый баланс, если ещё не начислен — не переначисляет тем, кто уже получил его.
     /// </summary>
     /// <param name="startingBalance">Текущая настроенная сумма стартового баланса.</param>
     /// <returns>true, если начисление произошло.</returns>

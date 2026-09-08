@@ -5,8 +5,7 @@ using GameBackend.Services.Catalog.API.Domain;
 namespace GameBackend.Services.Catalog.API.Application.Commands;
 
 /// <summary>
-/// Обработчик команды создания предмета.
-/// Создаёт агрегат через фабричный метод (валидация в домене) и сохраняет его.
+/// Обработчик команды создания предмета: создаёт агрегат через фабричный метод и сохраняет его.
 /// </summary>
 public sealed class CreateItemCommandHandler : ICommandHandler<CreateItemCommand, Guid>
 {

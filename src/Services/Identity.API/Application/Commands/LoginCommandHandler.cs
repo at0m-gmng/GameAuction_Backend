@@ -45,8 +45,7 @@ public sealed class LoginCommandHandler : ICommandHandler<LoginCommand, string>
     }
 
     /// <summary>
-    /// Проверяет учётные данные и возвращает JWT-токен.
-    /// Нормализует email для поиска, чтобы aBc@gmail.com и ABC@gmail.com находили одного игрока.
+    /// Проверяет учётные данные, возвращает JWT; нормализует email, чтобы регистр не влиял на поиск игрока.
     /// </summary>
     /// <param name="command">Команда логина.</param>
     /// <param name="cancellationToken">Токен отмены.</param>

@@ -1,32 +1,32 @@
-using GameBackend.SharedKernel.Application;
 using GameBackend.Services.Lobby.API.Application.Interfaces;
+using GameBackend.Services.Lobby.API.Domain;
 using GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
 using Microsoft.Extensions.Logging;
 
-namespace GameBackend.Services.Lobby.API.Application.Commands;
+namespace GameBackend.Services.Lobby.API.Application.Services;
 
 /// <summary>
-/// Обработчик команды завершения аукциона.
+/// Завершает аукцион и рассчитывается с победителем — доменом или лениво при чтении просроченного лобби.
 /// </summary>
-public sealed class CompleteAuctionCommandHandler : ICommandHandler<CompleteAuctionCommand>
+public sealed class AuctionCompletionService
 {
     private readonly ILobbyRepository _repository;
     private readonly IIdentityServiceClient _identityClient;
     private readonly ICatalogServiceClient _catalogClient;
-    private readonly ILogger<CompleteAuctionCommandHandler> _logger;
+    private readonly ILogger<AuctionCompletionService> _logger;
 
     /// <summary>
-    /// Инициализирует обработчик зависимостями.
+    /// Инициализирует сервис зависимостями.
     /// </summary>
     /// <param name="repository">Репозиторий лобби.</param>
     /// <param name="identityClient">Клиент к Identity.API (списание баланса).</param>
     /// <param name="catalogClient">Клиент к Catalog.API (передача предмета).</param>
     /// <param name="logger">Логгер.</param>
-    public CompleteAuctionCommandHandler(
+    public AuctionCompletionService(
         ILobbyRepository repository,
         IIdentityServiceClient identityClient,
         ICatalogServiceClient catalogClient,
-        ILogger<CompleteAuctionCommandHandler> logger)
+        ILogger<AuctionCompletionService> logger)
     {
         _repository = repository;
         _identityClient = identityClient;
@@ -35,15 +35,25 @@ public sealed class CompleteAuctionCommandHandler : ICommandHandler<CompleteAuct
     }
 
     /// <summary>
-    /// Загружает лобби, завершает аукцион, сохраняет и рассчитывается с победителем.
+    /// Завершает лобби, если оно в статусе Bidding и время аукциона истекло. Иначе ничего не делает.
     /// </summary>
-    /// <param name="command">Команда.</param>
+    /// <param name="lobby">Уже загруженный агрегат лобби.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
-    public async Task Handle(CompleteAuctionCommand command, CancellationToken cancellationToken)
+    public async Task CompleteIfExpiredAsync(LobbyAggregate lobby, CancellationToken cancellationToken)
     {
-        var lobby = await _repository.GetByIdAsync(command.LobbyId, cancellationToken)
-                    ?? throw new InvalidOperationException($"Лобби {command.LobbyId} не найдено");
+        if (lobby.Status != LobbyStatus.Bidding || lobby.EndsAt is null || lobby.EndsAt > DateTime.UtcNow)
+            return;
 
+        await CompleteAsync(lobby, cancellationToken);
+    }
+
+    /// <summary>
+    /// Завершает аукцион, сохраняет лобби и best-effort рассчитывается с победителем.
+    /// </summary>
+    /// <param name="lobby">Уже загруженный агрегат лобби.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    public async Task CompleteAsync(LobbyAggregate lobby, CancellationToken cancellationToken)
+    {
         lobby.Complete();
 
         await _repository.SaveAsync(lobby, cancellationToken);

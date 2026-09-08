@@ -4,8 +4,7 @@ using GameBackend.SharedKernel.Domain;
 namespace GameBackend.Services.Catalog.API.Application.Commands;
 
 /// <summary>
-/// Команда создания новой каталожной карточки предмета.
-/// Возвращает идентификатор созданного предмета.
+/// Команда создания новой каталожной карточки предмета; возвращает идентификатор созданного предмета.
 /// </summary>
 /// <param name="Name">Название предмета.</param>
 /// <param name="Description">Описание предмета.</param>

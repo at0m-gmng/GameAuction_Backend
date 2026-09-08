@@ -5,8 +5,7 @@ using GameBackend.Services.Catalog.API.Application.Items;
 namespace GameBackend.Services.Catalog.API.Application.Queries;
 
 /// <summary>
-/// Обработчик запроса списка предметов каталога.
-/// Загружает предметы из репозитория и преобразует их в DTO для UI.
+/// Обработчик запроса списка предметов каталога: загружает из репозитория и преобразует в DTO для UI.
 /// </summary>
 public sealed class GetItemsQueryHandler : IQueryHandler<GetItemsQuery, IReadOnlyCollection<ItemCatalogDto>>
 {

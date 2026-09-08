@@ -1,8 +1,7 @@
 ﻿namespace GameBackend.Services.Generation.API.Domain;
 
 /// <summary>
-/// Генератор заготовок: случайный архетип + случайный уровень редкости,
-/// итоговая цена = BasePrice × PriceMultiplier. Без состояния.
+/// Генератор заготовок: случайный архетип и редкость, цена = BasePrice × PriceMultiplier, без состояния.
 /// </summary>
 public sealed class ItemGenerator : IItemGenerator
 {

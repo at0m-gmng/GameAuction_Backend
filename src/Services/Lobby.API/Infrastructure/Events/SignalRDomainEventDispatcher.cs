@@ -7,8 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace GameBackend.Services.Lobby.API.Infrastructure.Events;
 
 /// <summary>
-/// Диспетчер доменных событий через SignalR.
-/// События конкретного лобби уходят в его группу, LobbyCreated — всем (обновить список).
+/// Диспетчер доменных событий через SignalR — события лобби в его группу, LobbyCreated всем.
 /// </summary>
 public sealed class SignalRDomainEventDispatcher : IDomainEventDispatcher
 {

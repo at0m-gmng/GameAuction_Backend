@@ -3,8 +3,7 @@
 namespace GameBackend.Services.Lobby.API.Domain;
 
 /// <summary>
-/// Ставка игрока в рамках аукциона внутри лобби.
-/// Является частью агрегата Lobby, не может существовать отдельно.
+/// Ставка игрока в аукционе лобби — часть агрегата Lobby, не существует отдельно.
 /// </summary>
 public sealed class Bid : Entity
 {

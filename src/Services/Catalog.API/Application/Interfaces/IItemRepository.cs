@@ -4,9 +4,7 @@ using GameBackend.SharedKernel.Domain;
 namespace GameBackend.Services.Catalog.API.Application.Interfaces;
 
 /// <summary>
-/// Интерфейс репозитория для работы с каталожными карточками предметов.
-/// Определяет контракт для сохранения, загрузки и поиска предметов.
-/// Реализация находится в Infrastructure слое.
+/// Интерфейс репозитория каталожных карточек предметов — контракт для CRUD, реализация в Infrastructure.
 /// </summary>
 public interface IItemRepository
 {

@@ -6,8 +6,7 @@ using GameBackend.SharedKernel.Application;
 namespace GameBackend.Services.Catalog.API.Application.Commands;
 
 /// <summary>
-/// Обработчик генерации публичного предмета: запрашивает заготовку у Generation.API
-/// и сохраняет её как карточку каталога (остаток — 1, без владельца).
+/// Обработчик генерации публичного предмета: запрашивает заготовку у Generation.API и сохраняет как карточку каталога.
 /// </summary>
 public sealed class GeneratePublicItemCommandHandler : ICommandHandler<GeneratePublicItemCommand, Guid>
 {

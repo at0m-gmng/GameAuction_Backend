@@ -1,6 +1,7 @@
 ﻿using GameBackend.SharedKernel.Application;
 using GameBackend.Services.Lobby.API.Application.Interfaces;
 using GameBackend.Services.Lobby.API.Application.Lobbies;
+using GameBackend.Services.Lobby.API.Application.Services;
 using GameBackend.Services.Lobby.API.Domain;
 
 namespace GameBackend.Services.Lobby.API.Application.Queries;
@@ -11,18 +12,21 @@ namespace GameBackend.Services.Lobby.API.Application.Queries;
 public sealed class GetLobbyQueryHandler : IQueryHandler<GetLobbyQuery, LobbyDetailsDto?>
 {
     private readonly ILobbyRepository _repository;
+    private readonly AuctionCompletionService _auctionCompletion;
 
     /// <summary>
     /// Инициализирует обработчик репозиторием.
     /// </summary>
     /// <param name="repository">Репозиторий лобби.</param>
-    public GetLobbyQueryHandler(ILobbyRepository repository)
+    /// <param name="auctionCompletion">Сервис завершения просроченных аукционов.</param>
+    public GetLobbyQueryHandler(ILobbyRepository repository, AuctionCompletionService auctionCompletion)
     {
         _repository = repository;
+        _auctionCompletion = auctionCompletion;
     }
 
     /// <summary>
-    /// Возвращает детальную информацию лобби или null.
+    /// Возвращает детальную информацию лобби или null, попутно лениво завершая просроченный аукцион.
     /// </summary>
     /// <param name="query">Запрос.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -31,6 +35,8 @@ public sealed class GetLobbyQueryHandler : IQueryHandler<GetLobbyQuery, LobbyDet
         var lobby = await _repository.GetByIdAsync(query.LobbyId, cancellationToken);
         if (lobby is null)
             return null;
+
+        await _auctionCompletion.CompleteIfExpiredAsync(lobby, cancellationToken);
 
         return new LobbyDetailsDto(
             lobby.Id,
