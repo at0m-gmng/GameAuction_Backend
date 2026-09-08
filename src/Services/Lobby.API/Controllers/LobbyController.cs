@@ -1,7 +1,9 @@
 ﻿using GameBackend.Services.Lobby.API.Application.Commands;
 using GameBackend.Services.Lobby.API.Application.Lobbies;
 using GameBackend.Services.Lobby.API.Application.Queries;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace GameBackend.Services.Lobby.API.Controllers;
 
@@ -13,13 +15,8 @@ public sealed record CreateLobbyRequest(
     decimal StartingPrice,
     int MaxParticipants);
 
-// TODO(auth): убрать PlayerId из тела запроса — брать из JWT после шага авторизации.
-/// <summary>Контракт запроса на присоединение к лобби.</summary>
-public sealed record JoinLobbyRequest(Guid PlayerId);
-
-// TODO(auth): убрать PlayerId из тела запроса — брать из JWT после шага авторизации.
 /// <summary>Контракт запроса на ставку.</summary>
-public sealed record PlaceBidRequest(Guid PlayerId, decimal Amount);
+public sealed record PlaceBidRequest(decimal Amount);
 
 /// <summary>Контракт запроса на запуск аукциона.</summary>
 public sealed record StartAuctionRequest(int DurationSeconds);
@@ -94,12 +91,16 @@ public sealed class LobbyController : ControllerBase
     }
 
     /// <summary>
-    /// Присоединяет игрока к лобби.
+    /// Присоединяет вызывающего игрока к лобби. Требует JWT-токен.
     /// </summary>
+    [Authorize]
     [HttpPost("{id:guid}/join")]
-    public async Task<IActionResult> Join(Guid id, [FromBody] JoinLobbyRequest request, CancellationToken ct = default)
+    public async Task<IActionResult> Join(Guid id, CancellationToken ct = default)
     {
-        await _join.Handle(new JoinLobbyCommand(id, request.PlayerId), ct);
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        await _join.Handle(new JoinLobbyCommand(id, playerId.Value), ct);
         return NoContent();
     }
 
@@ -114,12 +115,16 @@ public sealed class LobbyController : ControllerBase
     }
 
     /// <summary>
-    /// Регистрирует ставку игрока.
+    /// Регистрирует ставку вызывающего игрока. Требует JWT-токен.
     /// </summary>
+    [Authorize]
     [HttpPost("{id:guid}/bids")]
     public async Task<IActionResult> PlaceBid(Guid id, [FromBody] PlaceBidRequest request, CancellationToken ct = default)
     {
-        await _placeBid.Handle(new PlaceBidCommand(id, request.PlayerId, request.Amount), ct);
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        await _placeBid.Handle(new PlaceBidCommand(id, playerId.Value, request.Amount), ct);
         return NoContent();
     }
 
@@ -131,5 +136,15 @@ public sealed class LobbyController : ControllerBase
     {
         await _complete.Handle(new CompleteAuctionCommand(id), ct);
         return NoContent();
+    }
+
+    private Guid? GetPlayerId()
+    {
+        var claim = User.FindFirst(JwtRegisteredClaimNames.Sub);
+
+        if (claim is null || !Guid.TryParse(claim.Value, out var playerId))
+            return null;
+
+        return playerId;
     }
 }

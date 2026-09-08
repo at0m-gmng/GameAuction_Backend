@@ -3,12 +3,18 @@ using GameBackend.Services.Lobby.API.Application.Interfaces;
 using GameBackend.Services.Lobby.API.Application.Queries;
 using GameBackend.Services.Lobby.API.Hubs;
 using GameBackend.Services.Lobby.API.Infrastructure.Events;
+using GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
 using GameBackend.Services.Lobby.API.Infrastructure.Persistence;
 using GameBackend.Services.Lobby.API.Infrastructure.Persistence.Repositories;
 using GameBackend.SharedKernel.Application;
+using GameBackend.SharedKernel.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 const string FrontendCorsPolicy = "Frontend";
+const int HmacSha256MinKeyBytes = 32;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +49,77 @@ builder.Services.AddScoped<CompleteAuctionCommandHandler>();
 builder.Services.AddScoped<GetOpenLobbiesQueryHandler>();
 builder.Services.AddScoped<GetLobbyQueryHandler>();
 
+var internalApiKey = builder.Configuration["InternalApi:Key"];
+if (string.IsNullOrWhiteSpace(internalApiKey))
+    throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
+
+var identityBaseUrl = builder.Configuration["InternalApi:IdentityBaseUrl"];
+if (string.IsNullOrWhiteSpace(identityBaseUrl))
+    throw new InvalidOperationException("InternalApi:IdentityBaseUrl не задан.");
+
+var catalogBaseUrl = builder.Configuration["InternalApi:CatalogBaseUrl"];
+if (string.IsNullOrWhiteSpace(catalogBaseUrl))
+    throw new InvalidOperationException("InternalApi:CatalogBaseUrl не задан.");
+
+// NOTE: короткий таймаут — расчёт по завершённому аукциону best-effort, не должен подвешивать запрос.
+var internalApiTimeout = TimeSpan.FromSeconds(5);
+
+builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(identityBaseUrl);
+    client.Timeout = internalApiTimeout;
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+});
+
+builder.Services.AddHttpClient<ICatalogServiceClient, CatalogServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(catalogBaseUrl);
+    client.Timeout = internalApiTimeout;
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+});
+
+// NOTE: Issuer/Audience/SecretKey должны совпадать с Identity.API — токены подписывает он.
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
+    ?? throw new InvalidOperationException(
+        $"Конфигурация JWT отсутствует: секция '{JwtSettings.SectionName}' не найдена.");
+
+if (string.IsNullOrWhiteSpace(jwtSettings.Issuer))
+    throw new InvalidOperationException("Jwt:Issuer не задан.");
+if (string.IsNullOrWhiteSpace(jwtSettings.Audience))
+    throw new InvalidOperationException("Jwt:Audience не задан.");
+if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey))
+    throw new InvalidOperationException("Jwt:SecretKey не задан — установите переменную окружения Jwt__SecretKey.");
+if (Encoding.UTF8.GetByteCount(jwtSettings.SecretKey) < HmacSha256MinKeyBytes)
+    throw new InvalidOperationException($"Jwt:SecretKey слишком короткий для HS256: нужно минимум {HmacSha256MinKeyBytes} байт.");
+
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey));
+
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        // NOTE: без этого JwtBearerHandler молча переименовывает claim "sub" в легаси ClaimTypes.NameIdentifier.
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = signingKey,
+            ClockSkew = TimeSpan.Zero,
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -52,7 +129,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors(FrontendCorsPolicy);
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.MapHub<LobbyHub>("/hubs/lobby");
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<LobbyDbContext>();
+    await db.Database.EnsureCreatedAsync();
+}
 
 app.Run();

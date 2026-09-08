@@ -51,6 +51,10 @@ var internalApiKey = builder.Configuration["InternalApi:Key"];
 if (string.IsNullOrWhiteSpace(internalApiKey))
     throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
 
+// NOTE: тот же ключ и на вход (Lobby.API дёргает /internal/debit), и на выход (звонки в Catalog/Generation).
+builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
+builder.Services.AddScoped<DebitBalanceCommandHandler>();
+
 var generationBaseUrl = builder.Configuration["InternalApi:GenerationBaseUrl"];
 if (string.IsNullOrWhiteSpace(generationBaseUrl))
     throw new InvalidOperationException("InternalApi:GenerationBaseUrl не задан.");
