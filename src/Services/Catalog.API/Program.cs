@@ -39,23 +39,33 @@ builder.Services.AddScoped<GetItemsQueryHandler>();
 builder.Services.AddScoped<GetInventoryQueryHandler>();
 builder.Services.AddScoped<BuyItemCommandHandler>();
 builder.Services.AddScoped<GrantItemCommandHandler>();
+builder.Services.AddScoped<ListInventoryItemForAuctionCommandHandler>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 
-var internalApiKey = builder.Configuration["InternalApi:Key"];
-if (string.IsNullOrWhiteSpace(internalApiKey))
+var internalApi = builder.Configuration.GetSection(InternalApiSettings.SectionName).Get<InternalApiSettings>()
+    ?? throw new InvalidOperationException($"Конфигурация '{InternalApiSettings.SectionName}' отсутствует.");
+
+if (string.IsNullOrWhiteSpace(internalApi.Key))
     throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
-
-builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
-
-var generationBaseUrl = builder.Configuration["InternalApi:GenerationBaseUrl"];
-if (string.IsNullOrWhiteSpace(generationBaseUrl))
+if (string.IsNullOrWhiteSpace(internalApi.GenerationBaseUrl))
     throw new InvalidOperationException("InternalApi:GenerationBaseUrl не задан.");
+if (string.IsNullOrWhiteSpace(internalApi.LobbyBaseUrl))
+    throw new InvalidOperationException("InternalApi:LobbyBaseUrl не задан.");
+
+builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApi.Key));
 
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
 {
-    client.BaseAddress = new Uri(generationBaseUrl);
+    client.BaseAddress = new Uri(internalApi.GenerationBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(5);
-    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
+});
+
+builder.Services.AddHttpClient<ILobbyServiceClient, LobbyServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(internalApi.LobbyBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(5);
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 });
 
 var marketplaceSettings = builder.Configuration.GetSection(MarketplaceSettings.SectionName).Get<MarketplaceSettings>()

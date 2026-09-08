@@ -15,6 +15,11 @@ namespace GameBackend.Services.Catalog.API.Controllers;
 public sealed record BuyItemRequest(Guid ItemId, int Quantity = 1);
 
 /// <summary>
+/// Контракт запроса на выставление предмета из инвентаря на аукцион.
+/// </summary>
+public sealed record ListForAuctionRequest(decimal StartingPrice);
+
+/// <summary>
 /// Эндпоинты каталога: витрина (публично), инвентарь и покупка (по токену).
 /// </summary>
 [ApiController]
@@ -24,6 +29,7 @@ public sealed class CatalogController : ControllerBase
     private readonly GetItemsQueryHandler _getItems;
     private readonly GetInventoryQueryHandler _getInventory;
     private readonly BuyItemCommandHandler _buy;
+    private readonly ListInventoryItemForAuctionCommandHandler _listForAuction;
 
     /// <summary>
     /// Инициализирует контроллер обработчиками.
@@ -31,14 +37,17 @@ public sealed class CatalogController : ControllerBase
     /// <param name="getItems">Запрос витрины.</param>
     /// <param name="getInventory">Запрос инвентаря.</param>
     /// <param name="buy">Команда покупки.</param>
+    /// <param name="listForAuction">Команда выставления предмета на аукцион.</param>
     public CatalogController(
         GetItemsQueryHandler getItems,
         GetInventoryQueryHandler getInventory,
-        BuyItemCommandHandler buy)
+        BuyItemCommandHandler buy,
+        ListInventoryItemForAuctionCommandHandler listForAuction)
     {
         _getItems = getItems;
         _getInventory = getInventory;
         _buy = buy;
+        _listForAuction = listForAuction;
     }
 
     /// <summary>
@@ -86,6 +95,30 @@ public sealed class CatalogController : ControllerBase
             return Ok();
         }
         catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Выставляет предмет из инвентаря на аукцион. Требует JWT-токен.
+    /// </summary>
+    [Authorize]
+    [HttpPost("inventory/{itemId:guid}/list-for-auction")]
+    public async Task<ActionResult<Guid>> ListForAuction(Guid itemId, [FromBody] ListForAuctionRequest request, CancellationToken ct = default)
+    {
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        try
+        {
+            var lobbyId = await _listForAuction.Handle(
+                new ListInventoryItemForAuctionCommand(playerId.Value, itemId, request.StartingPrice),
+                ct);
+
+            return Ok(lobbyId);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
         {
             return BadRequest(new { message = ex.Message });
         }

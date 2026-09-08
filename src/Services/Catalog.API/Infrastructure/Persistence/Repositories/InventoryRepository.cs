@@ -47,4 +47,11 @@ public class InventoryRepository : IInventoryRepository
 
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task DeleteAsync(InventoryItem inventoryItem, CancellationToken cancellationToken = default)
+    {
+        _context.InventoryItems.Remove(inventoryItem);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

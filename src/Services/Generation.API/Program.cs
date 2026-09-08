@@ -1,6 +1,7 @@
 using GameBackend.Services.Generation.API.Application.Commands;
 using GameBackend.Services.Generation.API.Application.Interfaces;
 using GameBackend.Services.Generation.API.Domain;
+using GameBackend.Services.Generation.API.Infrastructure.Configuration;
 using GameBackend.Services.Generation.API.Infrastructure.Persistence;
 using GameBackend.Services.Generation.API.Infrastructure.Persistence.Repositories;
 using GameBackend.SharedKernel.Security;
@@ -18,11 +19,13 @@ builder.Services.AddSingleton<IItemGenerator, ItemGenerator>();
 builder.Services.AddScoped<IGenerationPoolRepository, GenerationPoolRepository>();
 builder.Services.AddScoped<GenerateItemCommandHandler>();
 
-var internalApiKey = builder.Configuration["InternalApi:Key"];
-if (string.IsNullOrWhiteSpace(internalApiKey))
+var internalApi = builder.Configuration.GetSection(InternalApiSettings.SectionName).Get<InternalApiSettings>()
+    ?? throw new InvalidOperationException($"Конфигурация '{InternalApiSettings.SectionName}' отсутствует.");
+
+if (string.IsNullOrWhiteSpace(internalApi.Key))
     throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
 
-builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
+builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApi.Key));
 
 var app = builder.Build();
 

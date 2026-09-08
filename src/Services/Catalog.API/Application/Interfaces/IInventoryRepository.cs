@@ -30,4 +30,11 @@ public interface IInventoryRepository
     /// <param name="inventoryItem">Позиция инвентаря.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     Task SaveAsync(InventoryItem inventoryItem, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Удаляет позицию инвентаря.
+    /// </summary>
+    /// <param name="inventoryItem">Позиция инвентаря для удаления.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    Task DeleteAsync(InventoryItem inventoryItem, CancellationToken cancellationToken = default);
 }

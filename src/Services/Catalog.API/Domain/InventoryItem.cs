@@ -52,4 +52,17 @@ public sealed class InventoryItem : AggregateRoot
     {
         Quantity += count;
     }
+
+    /// <summary>
+    /// Списывает копии предмета с позиции; не даёт количеству уйти в отрицательное значение.
+    /// </summary>
+    /// <param name="count">Сколько копий списать.</param>
+    /// <exception cref="InvalidOperationException">Если копий недостаточно.</exception>
+    public void RemoveQuantity(int count = 1)
+    {
+        if (count > Quantity)
+            throw new InvalidOperationException($"Недостаточно копий. Доступно: {Quantity}, запрошено: {count}");
+
+        Quantity -= count;
+    }
 }

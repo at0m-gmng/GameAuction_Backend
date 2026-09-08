@@ -47,37 +47,35 @@ builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<ICommandHandler<RegisterCommand, string>, RegisterCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<LoginCommand, string>, LoginCommandHandler>();
 
-var internalApiKey = builder.Configuration["InternalApi:Key"];
-if (string.IsNullOrWhiteSpace(internalApiKey))
+var internalApi = builder.Configuration.GetSection(InternalApiSettings.SectionName).Get<InternalApiSettings>()
+    ?? throw new InvalidOperationException($"Конфигурация '{InternalApiSettings.SectionName}' отсутствует.");
+
+if (string.IsNullOrWhiteSpace(internalApi.Key))
     throw new InvalidOperationException("InternalApi:Key не задан — установите переменную окружения InternalApi__Key.");
+if (string.IsNullOrWhiteSpace(internalApi.GenerationBaseUrl))
+    throw new InvalidOperationException("InternalApi:GenerationBaseUrl не задан.");
+if (string.IsNullOrWhiteSpace(internalApi.CatalogBaseUrl))
+    throw new InvalidOperationException("InternalApi:CatalogBaseUrl не задан.");
 
 // NOTE: тот же ключ и на вход (Lobby.API дёргает /internal/debit), и на выход (звонки в Catalog/Generation).
-builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApiKey));
+builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApi.Key));
 builder.Services.AddScoped<DebitBalanceCommandHandler>();
-
-var generationBaseUrl = builder.Configuration["InternalApi:GenerationBaseUrl"];
-if (string.IsNullOrWhiteSpace(generationBaseUrl))
-    throw new InvalidOperationException("InternalApi:GenerationBaseUrl не задан.");
-
-var catalogBaseUrl = builder.Configuration["InternalApi:CatalogBaseUrl"];
-if (string.IsNullOrWhiteSpace(catalogBaseUrl))
-    throw new InvalidOperationException("InternalApi:CatalogBaseUrl не задан.");
 
 // NOTE: короткий таймаут — недоступность Generation/Catalog.API не должна задерживать вход.
 var internalApiTimeout = TimeSpan.FromSeconds(5);
 
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
 {
-    client.BaseAddress = new Uri(generationBaseUrl);
+    client.BaseAddress = new Uri(internalApi.GenerationBaseUrl);
     client.Timeout = internalApiTimeout;
-    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 });
 
 builder.Services.AddHttpClient<ICatalogServiceClient, CatalogServiceClient>(client =>
 {
-    client.BaseAddress = new Uri(catalogBaseUrl);
+    client.BaseAddress = new Uri(internalApi.CatalogBaseUrl);
     client.Timeout = internalApiTimeout;
-    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApiKey);
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 });
 
 builder.Services.AddScoped<WelcomeGiftFulfiller>();
