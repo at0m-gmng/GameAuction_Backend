@@ -23,4 +23,12 @@ public sealed class IdentityServiceClient : IIdentityServiceClient
 
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<decimal> GetBalanceAsync(Guid playerId, CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.GetAsync($"api/auth/internal/players/{playerId}/balance", cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<decimal>(cancellationToken: cancellationToken);
+    }
 }

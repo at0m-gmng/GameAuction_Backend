@@ -105,26 +105,26 @@ public sealed class LobbyAggregate : AggregateRoot
     /// <param name="startingPrice">Стартовая цена аукциона.</param>
     /// <param name="maxParticipants">Максимальное количество участников.</param>
     /// <returns>Новое лобби в статусе Gathering.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Если maxParticipants меньше 2.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Если maxParticipants меньше 1.</exception>
     public static LobbyAggregate Create(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
     {
-        if (maxParticipants < 2)
-            throw new ArgumentOutOfRangeException(nameof(maxParticipants), "Минимум 2 участника для аукциона");
+        if (maxParticipants < 1)
+            throw new ArgumentOutOfRangeException(nameof(maxParticipants), "Минимум 1 участник для аукциона");
 
         return new LobbyAggregate(itemId, itemName, itemImageUrl, startingPrice, maxParticipants);
     }
 
     /// <summary>
-    /// Добавляет игрока в лобби. Работает только в статусе Gathering и при наличии мест.
+    /// Добавляет игрока в лобби. Работает и до, и во время торгов — но не после их завершения.
     /// </summary>
     /// <param name="playerId">Идентификатор игрока.</param>
-    /// <exception cref="InvalidOperationException">Если лобби не в статусе Gathering.</exception>
+    /// <exception cref="InvalidOperationException">Если лобби уже завершено или отменено.</exception>
     /// <exception cref="InvalidOperationException">Если лобби заполнено.</exception>
     /// <exception cref="InvalidOperationException">Если игрок уже в лобби.</exception>
     public void Join(Guid playerId)
     {
-        if (Status != LobbyStatus.Gathering)
-            throw new InvalidOperationException("Присоединиться можно только в статусе Gathering");
+        if (Status != LobbyStatus.Gathering && Status != LobbyStatus.Bidding)
+            throw new InvalidOperationException("Присоединиться можно, только пока лобби открыто");
 
         if (_participants.Count >= MaxParticipants)
             throw new InvalidOperationException("Лобби заполнено");
@@ -148,7 +148,7 @@ public sealed class LobbyAggregate : AggregateRoot
         if (Status != LobbyStatus.Gathering)
             throw new InvalidOperationException("Аукцион можно запустить только в статусе Gathering");
 
-        if (_participants.Count < 2)
+        if (_participants.Count < 1)
             throw new InvalidOperationException("Недостаточно участников для старта аукциона");
 
         Status = LobbyStatus.Bidding;
@@ -156,15 +156,30 @@ public sealed class LobbyAggregate : AggregateRoot
     }
 
     /// <summary>
-    /// Регистрирует новую ставку. Первая ставка не ниже стартовой, остальные — выше текущей.
+    /// Продлевает уже идущий аукцион при присоединении нового игрока — время добавляется к оставшемуся.
+    /// </summary>
+    /// <param name="extension">Насколько продлить.</param>
+    /// <exception cref="InvalidOperationException">Если лобби не в статусе Bidding.</exception>
+    public void ExtendOnJoin(TimeSpan extension)
+    {
+        if (Status != LobbyStatus.Bidding)
+            throw new InvalidOperationException("Продлить можно только активный аукцион");
+
+        EndsAt = (EndsAt ?? DateTime.UtcNow).Add(extension);
+    }
+
+    /// <summary>
+    /// Регистрирует ставку (первая не ниже стартовой, остальные — выше текущей) и продлевает таймер.
     /// </summary>
     /// <param name="playerId">Идентификатор игрока, делающего ставку.</param>
     /// <param name="amount">Сумма ставки.</param>
+    /// <param name="availableBalance">Доступный баланс игрока — ставка не может его превышать.</param>
+    /// <param name="extensionWindow">На сколько продлевается таймер после успешной ставки.</param>
     /// <exception cref="InvalidOperationException">Если аукцион не в статусе Bidding.</exception>
     /// <exception cref="InvalidOperationException">Если время аукциона истекло.</exception>
     /// <exception cref="InvalidOperationException">Если игрока нет в лобби.</exception>
     /// <exception cref="InvalidOperationException">Если ставка некорректна.</exception>
-    public void PlaceBid(Guid playerId, decimal amount)
+    public void PlaceBid(Guid playerId, decimal amount, decimal availableBalance, TimeSpan extensionWindow)
     {
         if (Status != LobbyStatus.Bidding)
             throw new InvalidOperationException("Ставки можно делать только в статусе Bidding");
@@ -181,8 +196,12 @@ public sealed class LobbyAggregate : AggregateRoot
         if (CurrentBid is not null && amount <= CurrentBid.Amount)
             throw new InvalidOperationException($"Ставка должна быть больше текущей ({CurrentBid.Amount})");
 
+        if (amount > availableBalance)
+            throw new InvalidOperationException($"Ставка превышает доступный баланс ({availableBalance})");
+
         var bid = new Bid(playerId, amount, DateTime.UtcNow);
         _bids.Add(bid);
+        EndsAt = (EndsAt ?? DateTime.UtcNow).Add(extensionWindow);
 
         AddDomainEvent(new BidPlaced(Id, playerId, amount));
     }
@@ -200,5 +219,24 @@ public sealed class LobbyAggregate : AggregateRoot
         WinnerId = CurrentBid?.PlayerId;
 
         AddDomainEvent(new AuctionCompleted(Id, WinnerId, CurrentBid?.Amount));
+    }
+
+    /// <summary>
+    /// Сбрасывает раунд без ставок обратно в Gathering — участники выкидываются, предмет остаётся на продаже.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Если лобби не в статусе Bidding или ставка уже была.</exception>
+    public void ExpireWithoutBids()
+    {
+        if (Status != LobbyStatus.Bidding)
+            throw new InvalidOperationException("Сбросить можно только активный аукцион");
+
+        if (CurrentBid is not null)
+            throw new InvalidOperationException("Нельзя сбросить раунд, в котором уже есть ставки");
+
+        Status = LobbyStatus.Gathering;
+        EndsAt = null;
+        _participants.Clear();
+
+        AddDomainEvent(new RoundExpiredWithoutBids(Id));
     }
 }

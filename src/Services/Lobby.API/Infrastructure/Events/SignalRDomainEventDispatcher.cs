@@ -51,6 +51,11 @@ public sealed class SignalRDomainEventDispatcher : IDomainEventDispatcher
                     await _hub.Clients.Group(LobbyHub.GroupName(completed.LobbyId))
                         .SendAsync("AuctionCompleted", completed, cancellationToken);
                     break;
+
+                case RoundExpiredWithoutBids expired:
+                    await _hub.Clients.Group(LobbyHub.GroupName(expired.LobbyId))
+                        .SendAsync("RoundExpiredWithoutBids", expired, cancellationToken);
+                    break;
             }
         }
     }

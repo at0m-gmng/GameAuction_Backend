@@ -9,8 +9,7 @@ namespace GameBackend.Services.Catalog.API.Application.Commands;
 /// </summary>
 public sealed class ListInventoryItemForAuctionCommandHandler : ICommandHandler<ListInventoryItemForAuctionCommand, Guid>
 {
-    // NOTE: маленький порог для ручного тестирования — реиграть на реальный дефолт можно позже.
-    private const int DefaultMaxParticipants = 2;
+    private const int DefaultMaxParticipants = 5;
 
     private readonly IInventoryRepository _inventoryRepository;
     private readonly IItemRepository _itemRepository;

@@ -81,11 +81,18 @@ public sealed class LobbyController : ControllerBase
         if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
             return Unauthorized();
 
-        var id = await _create.Handle(
-            new CreateLobbyCommand(request.ItemId, request.ItemName, request.ItemImageUrl, request.StartingPrice, request.MaxParticipants),
-            ct);
+        try
+        {
+            var id = await _create.Handle(
+                new CreateLobbyCommand(request.ItemId, request.ItemName, request.ItemImageUrl, request.StartingPrice, request.MaxParticipants),
+                ct);
 
-        return Created($"/api/lobbies/{id}", id);
+            return Created($"/api/lobbies/{id}", id);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -98,8 +105,15 @@ public sealed class LobbyController : ControllerBase
         var playerId = GetPlayerId();
         if (playerId is null) return Unauthorized();
 
-        await _join.Handle(new JoinLobbyCommand(id, playerId.Value), ct);
-        return NoContent();
+        try
+        {
+            await _join.Handle(new JoinLobbyCommand(id, playerId.Value), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -112,8 +126,15 @@ public sealed class LobbyController : ControllerBase
         var playerId = GetPlayerId();
         if (playerId is null) return Unauthorized();
 
-        await _placeBid.Handle(new PlaceBidCommand(id, playerId.Value, request.Amount), ct);
-        return NoContent();
+        try
+        {
+            await _placeBid.Handle(new PlaceBidCommand(id, playerId.Value, request.Amount), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     private Guid? GetPlayerId()

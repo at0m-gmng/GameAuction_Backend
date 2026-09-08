@@ -35,7 +35,7 @@ public sealed class AuctionCompletionService
     }
 
     /// <summary>
-    /// Завершает лобби, если оно в статусе Bidding и время аукциона истекло. Иначе ничего не делает.
+    /// Обрабатывает истёкшее Bidding-лобби: без ставок — сброс в Gathering, со ставками — завершение и расчёт.
     /// </summary>
     /// <param name="lobby">Уже загруженный агрегат лобби.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -43,6 +43,13 @@ public sealed class AuctionCompletionService
     {
         if (lobby.Status != LobbyStatus.Bidding || lobby.EndsAt is null || lobby.EndsAt > DateTime.UtcNow)
             return;
+
+        if (lobby.CurrentBid is null)
+        {
+            lobby.ExpireWithoutBids();
+            await _repository.SaveAsync(lobby, cancellationToken);
+            return;
+        }
 
         await CompleteAsync(lobby, cancellationToken);
     }

@@ -1,5 +1,7 @@
 ﻿using GameBackend.SharedKernel.Application;
 using GameBackend.Services.Lobby.API.Application.Interfaces;
+using GameBackend.Services.Lobby.API.Application.Services;
+using GameBackend.Services.Lobby.API.Domain;
 
 namespace GameBackend.Services.Lobby.API.Application.Commands;
 
@@ -8,22 +10,24 @@ namespace GameBackend.Services.Lobby.API.Application.Commands;
 /// </summary>
 public sealed class JoinLobbyCommandHandler : ICommandHandler<JoinLobbyCommand>
 {
-    // NOTE: сервис не имеет отдельного эндпоинта/UI для настройки длительности за лобби — фиксированное окно ставок.
-    private static readonly TimeSpan AuctionDuration = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan AuctionDuration = TimeSpan.FromSeconds(60);
 
     private readonly ILobbyRepository _repository;
+    private readonly AuctionCompletionService _auctionCompletion;
 
     /// <summary>
-    /// Инициализирует обработчик репозиторием.
+    /// Инициализирует обработчик зависимостями.
     /// </summary>
     /// <param name="repository">Репозиторий лобби.</param>
-    public JoinLobbyCommandHandler(ILobbyRepository repository)
+    /// <param name="auctionCompletion">Сервис завершения просроченных аукционов.</param>
+    public JoinLobbyCommandHandler(ILobbyRepository repository, AuctionCompletionService auctionCompletion)
     {
         _repository = repository;
+        _auctionCompletion = auctionCompletion;
     }
 
     /// <summary>
-    /// Загружает лобби, добавляет игрока, автоматически стартует аукцион при заполнении и сохраняет.
+    /// Добавляет игрока: первый вход стартует торги, вход во время торгов продлевает таймер.
     /// </summary>
     /// <param name="command">Команда.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -32,10 +36,17 @@ public sealed class JoinLobbyCommandHandler : ICommandHandler<JoinLobbyCommand>
         var lobby = await _repository.GetByIdAsync(command.LobbyId, cancellationToken)
                     ?? throw new InvalidOperationException($"Лобби {command.LobbyId} не найдено");
 
+        // NOTE: сначала разбираемся с просрочкой — иначе join мог бы "оживить" уже протухший раунд.
+        await _auctionCompletion.CompleteIfExpiredAsync(lobby, cancellationToken);
+
+        var wasGathering = lobby.Status == LobbyStatus.Gathering;
+
         lobby.Join(command.PlayerId);
 
-        if (lobby.Participants.Count >= lobby.MaxParticipants)
+        if (wasGathering)
             lobby.StartAuction(AuctionDuration);
+        else
+            lobby.ExtendOnJoin(AuctionDuration);
 
         await _repository.SaveAsync(lobby, cancellationToken);
     }
