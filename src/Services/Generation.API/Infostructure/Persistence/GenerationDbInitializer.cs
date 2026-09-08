@@ -23,13 +23,14 @@ public static class GenerationDbInitializer
             // NOTE: картинки раздаются со статики Nexus Exchange (public/items), не отсюда.
             const string imageBaseUrl = "https://at0m-gmng.github.io/GameAuction_Front/items";
 
+            // NOTE: базовые цены ×500 — легендарка (×8) почти до миллиона, деньги должны быть дефицитом.
             db.ItemArchetypes.AddRange(
-                ItemArchetype.Create("Rusty Blade", ItemCategory.Weapons, "A worn but reliable blade", $"{imageBaseUrl}/blade.png", 100),
-                ItemArchetype.Create("Plasma Blaster", ItemCategory.Weapons, "Still holds a charge", $"{imageBaseUrl}/blaster.png", 150),
-                ItemArchetype.Create("Plasma Vest", ItemCategory.Armor, "Scorched but solid", $"{imageBaseUrl}/vest.png", 250),
-                ItemArchetype.Create("Nano Visor", ItemCategory.Armor, "Sees through smoke", $"{imageBaseUrl}/visor.png", 200),
-                ItemArchetype.Create("Nano Drone", ItemCategory.Tech, "Hums quietly", $"{imageBaseUrl}/drone.png", 300),
-                ItemArchetype.Create("Salvaged Scanner", ItemCategory.Tech, "Finds what others miss", $"{imageBaseUrl}/scanner.png", 180));
+                ItemArchetype.Create("Rusty Blade", ItemCategory.Weapons, "A worn but reliable blade", $"{imageBaseUrl}/blade.png", 50_000),
+                ItemArchetype.Create("Plasma Blaster", ItemCategory.Weapons, "Still holds a charge", $"{imageBaseUrl}/blaster.png", 75_000),
+                ItemArchetype.Create("Plasma Vest", ItemCategory.Armor, "Scorched but solid", $"{imageBaseUrl}/vest.png", 125_000),
+                ItemArchetype.Create("Nano Visor", ItemCategory.Armor, "Sees through smoke", $"{imageBaseUrl}/visor.png", 100_000),
+                ItemArchetype.Create("Nano Drone", ItemCategory.Tech, "Hums quietly", $"{imageBaseUrl}/drone.png", 150_000),
+                ItemArchetype.Create("Salvaged Scanner", ItemCategory.Tech, "Finds what others miss", $"{imageBaseUrl}/scanner.png", 90_000));
         }
 
         if (!await db.RarityTiers.AnyAsync())
