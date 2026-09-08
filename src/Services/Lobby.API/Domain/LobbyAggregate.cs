@@ -147,6 +147,10 @@ public sealed class LobbyAggregate : AggregateRoot
             return;
 
         AddDomainEvent(new PlayerLeftLobby(Id, playerId, _participants.Count));
+
+        // NOTE: иначе уход последнего оставлял Bidding с тикающим EndsAt — новый вход продлевал его, а не стартовал заново.
+        if (_participants.Count == 0 && Status == LobbyStatus.Bidding && CurrentBid is null)
+            ExpireWithoutBids();
     }
 
     /// <summary>
