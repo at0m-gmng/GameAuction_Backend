@@ -67,7 +67,7 @@ public class LobbyRepository : ILobbyRepository
             {
                 var entry = _context.Entry(bid);
                 Console.WriteLine($"[DIAG-BID] id={bid.Id} stateBefore={entry.State} isKeySet={entry.IsKeySet}");
-                if (entry.State == EntityState.Detached)
+                if (entry.State == EntityState.Detached || entry.State == EntityState.Modified)
                     entry.State = EntityState.Added;
                 Console.WriteLine($"[DIAG-BID] id={bid.Id} stateAfter={entry.State}");
             }
