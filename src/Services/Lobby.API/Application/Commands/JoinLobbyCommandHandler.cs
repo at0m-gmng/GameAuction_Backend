@@ -41,12 +41,16 @@ public sealed class JoinLobbyCommandHandler : ICommandHandler<JoinLobbyCommand>
 
         var wasGathering = lobby.Status == LobbyStatus.Gathering;
 
-        lobby.Join(command.PlayerId);
+        // NOTE: время двигаем только за реально нового игрока раунда — иначе повторные входы бесконечно продлевают таймер.
+        var isNewArrival = lobby.Join(command.PlayerId);
 
-        if (wasGathering)
-            lobby.StartAuction(AuctionDuration);
-        else
-            lobby.ExtendOnJoin(AuctionDuration);
+        if (isNewArrival)
+        {
+            if (wasGathering)
+                lobby.StartAuction(AuctionDuration);
+            else
+                lobby.ExtendOnJoin(AuctionDuration);
+        }
 
         await _repository.SaveAsync(lobby, cancellationToken);
     }

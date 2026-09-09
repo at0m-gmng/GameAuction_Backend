@@ -36,6 +36,11 @@ public class LobbyConfiguration : IEntityTypeConfiguration<LobbyAggregate>
         builder.PrimitiveCollection<List<Guid>>("_participants")
             .HasColumnName("Participants");
 
+        // NOTE: заходившие в раунде — тоже массив uuid[]; по нему решаем, продлевать ли таймер новому входу.
+        builder.Ignore(x => x.SeenPlayers);
+        builder.PrimitiveCollection<List<Guid>>("_seenPlayers")
+            .HasColumnName("SeenPlayers");
+
         builder.OwnsMany(x => x.Bids, bids =>
         {
             bids.ToTable("Bids");

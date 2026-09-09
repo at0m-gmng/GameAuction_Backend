@@ -49,6 +49,16 @@ public sealed class LobbyAggregate : AggregateRoot
     public IReadOnlyCollection<Guid> Participants => _participants.AsReadOnly();
 
     /// <summary>
+    /// Игроки, уже заходившие в этом раунде — за них таймер продлевается один раз, повторный вход не считается.
+    /// </summary>
+    private readonly List<Guid> _seenPlayers = new();
+
+    /// <summary>
+    /// IReadOnly-коллекция уже заходивших игроков для маппинга ORM.
+    /// </summary>
+    public IReadOnlyCollection<Guid> SeenPlayers => _seenPlayers.AsReadOnly();
+
+    /// <summary>
     /// История ставок в аукционе.
     /// </summary>
     private readonly List<Bid> _bids = new();
@@ -115,26 +125,33 @@ public sealed class LobbyAggregate : AggregateRoot
     }
 
     /// <summary>
-    /// Добавляет игрока в лобби. Работает и до, и во время торгов — но не после их завершения.
+    /// Добавляет игрока в лобби (до и во время торгов); возвращает true только для реально нового игрока раунда.
     /// </summary>
     /// <param name="playerId">Идентификатор игрока.</param>
+    /// <returns>true, если игрок впервые в этом раунде (повод продлить/стартовать таймер); иначе false.</returns>
     /// <exception cref="InvalidOperationException">Если лобби уже завершено или отменено.</exception>
     /// <exception cref="InvalidOperationException">Если лобби заполнено.</exception>
-    /// <exception cref="InvalidOperationException">Если игрок уже в лобби.</exception>
-    public void Join(Guid playerId)
+    public bool Join(Guid playerId)
     {
         if (Status != LobbyStatus.Gathering && Status != LobbyStatus.Bidding)
             throw new InvalidOperationException("Присоединиться можно, только пока лобби открыто");
 
+        // NOTE: повторный вход того, кто уже в лобби — идемпотентный no-op, время не трогаем.
+        if (_participants.Contains(playerId))
+            return false;
+
         if (_participants.Count >= MaxParticipants)
             throw new InvalidOperationException("Лобби заполнено");
 
-        if (_participants.Contains(playerId))
-            throw new InvalidOperationException("Игрок уже в лобби");
-
         _participants.Add(playerId);
-
         AddDomainEvent(new PlayerJoinedLobby(Id, playerId, _participants.Count));
+
+        // NOTE: +60 сек — только за нового игрока раунда; кто уже заходил (и вышел), время не двигает.
+        if (_seenPlayers.Contains(playerId))
+            return false;
+
+        _seenPlayers.Add(playerId);
+        return true;
     }
 
     /// <summary>
@@ -252,6 +269,7 @@ public sealed class LobbyAggregate : AggregateRoot
         Status = LobbyStatus.Gathering;
         EndsAt = null;
         _participants.Clear();
+        _seenPlayers.Clear();
 
         AddDomainEvent(new RoundExpiredWithoutBids(Id));
     }
