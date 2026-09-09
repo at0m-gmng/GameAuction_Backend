@@ -63,11 +63,13 @@ public class LobbyRepository : ILobbyRepository
         }
         else
         {
-            // NOTE: Bid.Id генерируется в домене до EF — DetectChanges видит непустой ключ и шлёт UPDATE, а не INSERT.
             foreach (var bid in lobby.Bids)
             {
-                if (_context.Entry(bid).State == EntityState.Detached)
-                    _context.Entry(bid).State = EntityState.Added;
+                var entry = _context.Entry(bid);
+                Console.WriteLine($"[DIAG-BID] id={bid.Id} stateBefore={entry.State} isKeySet={entry.IsKeySet}");
+                if (entry.State == EntityState.Detached)
+                    entry.State = EntityState.Added;
+                Console.WriteLine($"[DIAG-BID] id={bid.Id} stateAfter={entry.State}");
             }
         }
 
