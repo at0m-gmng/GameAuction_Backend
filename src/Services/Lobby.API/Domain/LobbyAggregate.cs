@@ -38,9 +38,6 @@ public sealed class LobbyAggregate : AggregateRoot
     /// </summary>
     public int MaxParticipants { get; private set; }
 
-    /// <summary>
-    /// Список игроков, зарегистрировавшихся в лобби.
-    /// </summary>
     private readonly List<Guid> _participants = new();
 
     /// <summary>
@@ -48,9 +45,6 @@ public sealed class LobbyAggregate : AggregateRoot
     /// </summary>
     public IReadOnlyCollection<Guid> Participants => _participants.AsReadOnly();
 
-    /// <summary>
-    /// Игроки, уже заходившие в этом раунде — за них таймер продлевается один раз, повторный вход не считается.
-    /// </summary>
     private readonly List<Guid> _seenPlayers = new();
 
     /// <summary>
@@ -58,9 +52,6 @@ public sealed class LobbyAggregate : AggregateRoot
     /// </summary>
     public IReadOnlyCollection<Guid> SeenPlayers => _seenPlayers.AsReadOnly();
 
-    /// <summary>
-    /// История ставок в аукционе.
-    /// </summary>
     private readonly List<Bid> _bids = new();
 
     /// <summary>
@@ -83,9 +74,6 @@ public sealed class LobbyAggregate : AggregateRoot
     /// </summary>
     public Guid? WinnerId { get; private set; }
 
-    /// <summary>
-    /// Инициализирует новое лобби. Используйте фабричный метод Create.
-    /// </summary>
     private LobbyAggregate(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
         : base(Guid.NewGuid())
     {
@@ -99,9 +87,6 @@ public sealed class LobbyAggregate : AggregateRoot
         AddDomainEvent(new LobbyCreated(Id, ItemId, MaxParticipants));
     }
 
-    /// <summary>
-    /// Приватный конструктор для поддержки ORM.
-    /// </summary>
     private LobbyAggregate()
     {
     }
@@ -155,17 +140,21 @@ public sealed class LobbyAggregate : AggregateRoot
     }
 
     /// <summary>
-    /// Убирает игрока из лобби, освобождая его слот. Не ошибка, если игрока там не было.
+    /// Убирает игрока из лобби, освобождая слот; сделавший ставку остаётся участником до конца раунда.
     /// </summary>
     /// <param name="playerId">Идентификатор игрока.</param>
     public void Leave(Guid playerId)
     {
+        // NOTE: сделавший ставку закреплён за раундом — уход со страницы не снимает его с аукциона.
+        if (_bids.Any(b => b.PlayerId == playerId))
+            return;
+
         if (!_participants.Remove(playerId))
             return;
 
         AddDomainEvent(new PlayerLeftLobby(Id, playerId, _participants.Count));
 
-        // NOTE: иначе уход последнего оставлял Bidding с тикающим EndsAt — новый вход продлевал его, а не стартовал заново.
+        // NOTE: последний ушёл без ставок — схлопываем раунд в Gathering, чтобы не висел активный таймер.
         if (_participants.Count == 0 && Status == LobbyStatus.Bidding && CurrentBid is null)
             ExpireWithoutBids();
     }

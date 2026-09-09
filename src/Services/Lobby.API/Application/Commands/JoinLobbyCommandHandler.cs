@@ -41,7 +41,6 @@ public sealed class JoinLobbyCommandHandler : ICommandHandler<JoinLobbyCommand>
 
         var wasGathering = lobby.Status == LobbyStatus.Gathering;
 
-        // NOTE: время двигаем только за реально нового игрока раунда — иначе повторные входы бесконечно продлевают таймер.
         var isNewArrival = lobby.Join(command.PlayerId);
 
         if (isNewArrival)
