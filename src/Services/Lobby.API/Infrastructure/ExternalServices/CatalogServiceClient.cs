@@ -14,11 +14,11 @@ public sealed class CatalogServiceClient : ICatalogServiceClient
         _httpClient = httpClient;
     }
 
-    public async Task AwardItemAsync(Guid itemId, Guid winnerId, CancellationToken cancellationToken = default)
+    public async Task AwardItemAsync(Guid itemId, Guid winnerId, decimal price, CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.PostAsJsonAsync(
             $"api/catalog/internal/items/{itemId}/award",
-            new { PlayerId = winnerId, Quantity = 1 },
+            new { PlayerId = winnerId, Quantity = 1, Price = price },
             cancellationToken);
 
         response.EnsureSuccessStatusCode();

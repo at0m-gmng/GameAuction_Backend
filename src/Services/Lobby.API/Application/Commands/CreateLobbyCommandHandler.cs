@@ -32,6 +32,7 @@ public sealed class CreateLobbyCommandHandler : ICommandHandler<CreateLobbyComma
             command.ItemId,
             command.ItemName,
             command.ItemImageUrl,
+            command.ItemRarity,
             command.StartingPrice,
             command.MaxParticipants);
 

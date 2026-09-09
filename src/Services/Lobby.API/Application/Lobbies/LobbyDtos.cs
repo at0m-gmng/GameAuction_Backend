@@ -1,4 +1,5 @@
 ﻿using GameBackend.Services.Lobby.API.Domain;
+using GameBackend.SharedKernel.Domain;
 
 namespace GameBackend.Services.Lobby.API.Application.Lobbies;
 
@@ -33,6 +34,7 @@ public sealed record LobbyDetailsDto(
     Guid ItemId,
     string ItemName,
     string? ItemImageUrl,
+    ItemRarity ItemRarity,
     decimal StartingPrice,
     LobbyStatus Status,
     int MaxSlots,
@@ -42,3 +44,8 @@ public sealed record LobbyDetailsDto(
     DateTime? EndsAt,
     Guid? WinnerId,
     IReadOnlyCollection<LobbyBidDto> Bids);
+
+/// <summary>
+/// DTO статистики побед и поражений игрока (экран "Профиль").
+/// </summary>
+public sealed record PlayerAuctionStatsDto(int Wins, int Losses);

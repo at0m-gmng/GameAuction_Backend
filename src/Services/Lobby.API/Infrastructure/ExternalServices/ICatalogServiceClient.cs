@@ -6,8 +6,8 @@ namespace GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
 public interface ICatalogServiceClient
 {
     /// <summary>
-    /// Передаёт предмет победителю аукциона.
+    /// Передаёт предмет победителю аукциона и переписывает цену каталога на цену продажи.
     /// </summary>
     /// <exception cref="HttpRequestException">Если Catalog.API недоступен или вернул ошибку.</exception>
-    Task AwardItemAsync(Guid itemId, Guid winnerId, CancellationToken cancellationToken = default);
+    Task AwardItemAsync(Guid itemId, Guid winnerId, decimal price, CancellationToken cancellationToken = default);
 }

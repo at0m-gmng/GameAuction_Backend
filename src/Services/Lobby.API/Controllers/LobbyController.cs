@@ -1,6 +1,7 @@
 ﻿using GameBackend.Services.Lobby.API.Application.Commands;
 using GameBackend.Services.Lobby.API.Application.Lobbies;
 using GameBackend.Services.Lobby.API.Application.Queries;
+using GameBackend.SharedKernel.Domain;
 using GameBackend.SharedKernel.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,7 @@ public sealed record CreateLobbyRequest(
     Guid ItemId,
     string ItemName,
     string? ItemImageUrl,
+    ItemRarity ItemRarity,
     decimal StartingPrice,
     int MaxParticipants);
 
@@ -32,6 +34,7 @@ public sealed class LobbyController : ControllerBase
     private readonly PlaceBidCommandHandler _placeBid;
     private readonly GetOpenLobbiesQueryHandler _openLobbies;
     private readonly GetLobbyQueryHandler _getLobby;
+    private readonly GetPlayerAuctionStatsQueryHandler _playerStats;
     private readonly IInternalCallerValidator _internalCallerValidator;
 
     /// <summary>
@@ -44,6 +47,7 @@ public sealed class LobbyController : ControllerBase
         PlaceBidCommandHandler placeBid,
         GetOpenLobbiesQueryHandler openLobbies,
         GetLobbyQueryHandler getLobby,
+        GetPlayerAuctionStatsQueryHandler playerStats,
         IInternalCallerValidator internalCallerValidator)
     {
         _create = create;
@@ -52,6 +56,7 @@ public sealed class LobbyController : ControllerBase
         _placeBid = placeBid;
         _openLobbies = openLobbies;
         _getLobby = getLobby;
+        _playerStats = playerStats;
         _internalCallerValidator = internalCallerValidator;
     }
 
@@ -62,6 +67,20 @@ public sealed class LobbyController : ControllerBase
     public async Task<ActionResult<IReadOnlyCollection<LobbyListDto>>> GetOpenLobbies(CancellationToken ct = default)
     {
         var result = await _openLobbies.Handle(new GetOpenLobbiesQuery(), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Возвращает статистику побед и поражений вызывающего игрока. Требует JWT-токен.
+    /// </summary>
+    [Authorize]
+    [HttpGet("stats/me")]
+    public async Task<ActionResult<PlayerAuctionStatsDto>> GetMyAuctionStats(CancellationToken ct = default)
+    {
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        var result = await _playerStats.Handle(new GetPlayerAuctionStatsQuery(playerId.Value), ct);
         return Ok(result);
     }
 
@@ -87,7 +106,8 @@ public sealed class LobbyController : ControllerBase
         try
         {
             var id = await _create.Handle(
-                new CreateLobbyCommand(request.ItemId, request.ItemName, request.ItemImageUrl, request.StartingPrice, request.MaxParticipants),
+                new CreateLobbyCommand(
+                    request.ItemId, request.ItemName, request.ItemImageUrl, request.ItemRarity, request.StartingPrice, request.MaxParticipants),
                 ct);
 
             return Created($"/api/lobbies/{id}", id);

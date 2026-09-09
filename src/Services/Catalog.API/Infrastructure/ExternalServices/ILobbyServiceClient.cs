@@ -1,3 +1,5 @@
+using GameBackend.SharedKernel.Domain;
+
 namespace GameBackend.Services.Catalog.API.Infrastructure.ExternalServices;
 
 /// <summary>
@@ -13,6 +15,7 @@ public interface ILobbyServiceClient
         Guid itemId,
         string itemName,
         string? itemImageUrl,
+        ItemRarity itemRarity,
         decimal startingPrice,
         int maxParticipants,
         CancellationToken cancellationToken = default);

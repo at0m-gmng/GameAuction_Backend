@@ -24,6 +24,11 @@ public sealed class LobbyAggregate : AggregateRoot
     public string? ItemImageUrl { get; private set; }
 
     /// <summary>
+    /// Снапшот редкости предмета (для витрины и экрана результата аукциона).
+    /// </summary>
+    public ItemRarity ItemRarity { get; private set; }
+
+    /// <summary>
     /// Стартовая цена аукциона. До первой ставки отображается как текущая.
     /// </summary>
     public decimal StartingPrice { get; private set; }
@@ -74,12 +79,13 @@ public sealed class LobbyAggregate : AggregateRoot
     /// </summary>
     public Guid? WinnerId { get; private set; }
 
-    private LobbyAggregate(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
+    private LobbyAggregate(Guid itemId, string itemName, string? itemImageUrl, ItemRarity itemRarity, decimal startingPrice, int maxParticipants)
         : base(Guid.NewGuid())
     {
         ItemId = itemId;
         ItemName = itemName;
         ItemImageUrl = itemImageUrl;
+        ItemRarity = itemRarity;
         StartingPrice = startingPrice;
         MaxParticipants = maxParticipants;
         Status = LobbyStatus.Gathering;
@@ -97,16 +103,18 @@ public sealed class LobbyAggregate : AggregateRoot
     /// <param name="itemId">Идентификатор предмета из каталога.</param>
     /// <param name="itemName">Снапшот названия предмета.</param>
     /// <param name="itemImageUrl">Снапшот ссылки на изображение.</param>
+    /// <param name="itemRarity">Снапшот редкости предмета.</param>
     /// <param name="startingPrice">Стартовая цена аукциона.</param>
     /// <param name="maxParticipants">Максимальное количество участников.</param>
     /// <returns>Новое лобби в статусе Gathering.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Если maxParticipants меньше 1.</exception>
-    public static LobbyAggregate Create(Guid itemId, string itemName, string? itemImageUrl, decimal startingPrice, int maxParticipants)
+    public static LobbyAggregate Create(
+        Guid itemId, string itemName, string? itemImageUrl, ItemRarity itemRarity, decimal startingPrice, int maxParticipants)
     {
         if (maxParticipants < 1)
             throw new ArgumentOutOfRangeException(nameof(maxParticipants), "Минимум 1 участник для аукциона");
 
-        return new LobbyAggregate(itemId, itemName, itemImageUrl, startingPrice, maxParticipants);
+        return new LobbyAggregate(itemId, itemName, itemImageUrl, itemRarity, startingPrice, maxParticipants);
     }
 
     /// <summary>

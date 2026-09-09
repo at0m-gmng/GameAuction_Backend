@@ -51,6 +51,23 @@ public class LobbyRepository : ILobbyRepository
     }
 
     /// <summary>
+    /// Считает завершённые аукционы игрока, где он делал ставку — победы и поражения.
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Количество побед и поражений.</returns>
+    public async Task<(int Wins, int Losses)> GetPlayerAuctionStatsAsync(Guid playerId, CancellationToken cancellationToken = default)
+    {
+        var outcomes = await _context.Lobbies
+            .Where(l => l.Status == LobbyStatus.Completed && l.Bids.Any(b => b.PlayerId == playerId))
+            .Select(l => l.WinnerId == playerId)
+            .ToListAsync(cancellationToken);
+
+        var wins = outcomes.Count(won => won);
+        return (wins, outcomes.Count - wins);
+    }
+
+    /// <summary>
     /// Сохраняет лобби и рассылает накопленные доменные события.
     /// </summary>
     /// <param name="lobby">Лобби для сохранения.</param>

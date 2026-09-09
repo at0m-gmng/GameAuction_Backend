@@ -27,6 +27,7 @@ public class LobbyConfiguration : IEntityTypeConfiguration<LobbyAggregate>
         builder.Property(x => x.ItemId).IsRequired();
         builder.Property(x => x.ItemName).HasMaxLength(ItemNameMaxLength).IsRequired();
         builder.Property(x => x.ItemImageUrl).HasMaxLength(ImageUrlMaxLength);
+        builder.Property(x => x.ItemRarity).IsRequired();
         builder.Property(x => x.StartingPrice).HasPrecision(PricePrecision, PriceScale);
         builder.Property(x => x.Status).IsRequired();
         builder.Property(x => x.MaxParticipants).IsRequired();

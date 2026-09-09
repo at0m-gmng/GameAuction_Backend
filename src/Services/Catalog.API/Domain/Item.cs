@@ -190,4 +190,17 @@ public sealed class Item : AggregateRoot
 
         Stock += quantity;
     }
+
+    /// <summary>
+    /// Устанавливает цену предмета по итогу продажи на аукционе.
+    /// </summary>
+    /// <param name="price">Новая цена (не может быть отрицательной).</param>
+    /// <exception cref="ArgumentOutOfRangeException">Если цена отрицательная.</exception>
+    public void UpdatePrice(decimal price)
+    {
+        if (price < 0)
+            throw new ArgumentOutOfRangeException(nameof(price), "Цена не может быть отрицательной");
+
+        StartingPrice = price;
+    }
 }

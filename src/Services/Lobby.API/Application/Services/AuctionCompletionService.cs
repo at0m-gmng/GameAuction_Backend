@@ -71,7 +71,7 @@ public sealed class AuctionCompletionService
         // NOTE: сначала выдаём предмет, потом списываем деньги — если выдача упадёт, деньги не пропадут зря.
         try
         {
-            await _catalogClient.AwardItemAsync(lobby.ItemId, lobby.WinnerId.Value, cancellationToken);
+            await _catalogClient.AwardItemAsync(lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
             await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
         }
         catch (Exception ex)

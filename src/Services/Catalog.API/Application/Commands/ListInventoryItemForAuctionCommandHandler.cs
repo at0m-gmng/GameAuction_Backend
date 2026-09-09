@@ -54,6 +54,7 @@ public sealed class ListInventoryItemForAuctionCommandHandler : ICommandHandler<
             item.Id,
             item.Name,
             item.ImageUrl,
+            item.Rarity,
             command.StartingPrice,
             DefaultMaxParticipants,
             cancellationToken);

@@ -43,6 +43,7 @@ public sealed class GetLobbyQueryHandler : IQueryHandler<GetLobbyQuery, LobbyDet
             lobby.ItemId,
             lobby.ItemName,
             lobby.ItemImageUrl,
+            lobby.ItemRarity,
             lobby.StartingPrice,
             lobby.Status,
             lobby.MaxParticipants,

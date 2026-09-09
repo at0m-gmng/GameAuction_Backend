@@ -24,7 +24,7 @@ public sealed class AwardItemCommandHandler : ICommandHandler<AwardItemCommand>
     }
 
     /// <summary>
-    /// Начисляет победителю предмет в инвентарь; остаток каталога не списывается — лот пришёл из инвентаря продавца.
+    /// Начисляет победителю предмет в инвентарь и переписывает цену каталога на цену продажи; склад не трогает.
     /// </summary>
     /// <param name="command">Команда.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -32,8 +32,11 @@ public sealed class AwardItemCommandHandler : ICommandHandler<AwardItemCommand>
     {
         var quantity = command.Quantity < 1 ? 1 : command.Quantity;
 
-        _ = await _itemRepository.GetByIdAsync(command.ItemId, cancellationToken)
+        var item = await _itemRepository.GetByIdAsync(command.ItemId, cancellationToken)
             ?? throw new InvalidOperationException("Предмет не найден");
+
+        item.UpdatePrice(command.Price);
+        await _itemRepository.SaveAsync(item, cancellationToken);
 
         var inventoryItem = await _inventoryRepository.GetByPlayerAndItemAsync(
             command.PlayerId,

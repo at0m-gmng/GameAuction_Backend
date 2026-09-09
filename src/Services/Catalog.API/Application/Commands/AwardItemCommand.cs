@@ -8,4 +8,5 @@ namespace GameBackend.Services.Catalog.API.Application.Commands;
 /// <param name="PlayerId">Идентификатор победителя.</param>
 /// <param name="ItemId">Идентификатор предмета каталога.</param>
 /// <param name="Quantity">Количество копий (по умолчанию 1).</param>
-public sealed record AwardItemCommand(Guid PlayerId, Guid ItemId, int Quantity) : ICommand;
+/// <param name="Price">Цена продажи — новая цена предмета в каталоге.</param>
+public sealed record AwardItemCommand(Guid PlayerId, Guid ItemId, int Quantity, decimal Price) : ICommand;

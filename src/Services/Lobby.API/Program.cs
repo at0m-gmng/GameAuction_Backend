@@ -50,6 +50,7 @@ builder.Services.AddScoped<PlaceBidCommandHandler>();
 builder.Services.AddScoped<AuctionCompletionService>();
 builder.Services.AddScoped<GetOpenLobbiesQueryHandler>();
 builder.Services.AddScoped<GetLobbyQueryHandler>();
+builder.Services.AddScoped<GetPlayerAuctionStatsQueryHandler>();
 
 var internalApi = builder.Configuration.GetSection(InternalApiSettings.SectionName).Get<InternalApiSettings>()
     ?? throw new InvalidOperationException($"Конфигурация '{InternalApiSettings.SectionName}' отсутствует.");

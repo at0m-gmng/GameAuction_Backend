@@ -23,6 +23,14 @@ public interface ILobbyRepository
     Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Считает завершённые аукционы игрока, где он делал ставку — победы и поражения.
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Количество побед и поражений.</returns>
+    Task<(int Wins, int Losses)> GetPlayerAuctionStatsAsync(Guid playerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Сохраняет лобби.
     /// </summary>
     /// <param name="lobby">Лобби для сохранения.</param>

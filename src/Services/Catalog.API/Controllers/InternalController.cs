@@ -18,7 +18,7 @@ public sealed record GrantItemRequest(
     decimal StartingPrice);
 
 /// <summary>Контракт запроса на передачу предмета победителю аукциона.</summary>
-public sealed record AwardItemRequest(Guid PlayerId, int Quantity);
+public sealed record AwardItemRequest(Guid PlayerId, int Quantity, decimal Price);
 
 /// <summary>
 /// Внутренние эндпоинты каталога. Принимают только сервисы с общим секретом.
@@ -92,7 +92,7 @@ public sealed class InternalController : ControllerBase
 
         try
         {
-            await _awardItem.Handle(new AwardItemCommand(request.PlayerId, itemId, request.Quantity), ct);
+            await _awardItem.Handle(new AwardItemCommand(request.PlayerId, itemId, request.Quantity, request.Price), ct);
             return NoContent();
         }
         catch (InvalidOperationException ex)
