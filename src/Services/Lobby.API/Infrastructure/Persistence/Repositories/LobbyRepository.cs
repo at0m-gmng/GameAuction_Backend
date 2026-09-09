@@ -63,13 +63,12 @@ public class LobbyRepository : ILobbyRepository
         }
         else
         {
+            // NOTE: EF помечает новую ставку как Modified (ключ задан в домене) — ставим Added вручную, иначе UPDATE вместо INSERT.
             foreach (var bid in lobby.Bids)
             {
                 var entry = _context.Entry(bid);
-                Console.WriteLine($"[DIAG-BID] id={bid.Id} stateBefore={entry.State} isKeySet={entry.IsKeySet}");
                 if (entry.State == EntityState.Detached || entry.State == EntityState.Modified)
                     entry.State = EntityState.Added;
-                Console.WriteLine($"[DIAG-BID] id={bid.Id} stateAfter={entry.State}");
             }
         }
 

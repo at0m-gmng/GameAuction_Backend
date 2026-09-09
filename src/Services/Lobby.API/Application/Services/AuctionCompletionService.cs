@@ -68,11 +68,11 @@ public sealed class AuctionCompletionService
         if (lobby.WinnerId is null || lobby.CurrentBid is null)
             return;
 
-        // NOTE: best-effort — сбой оплаты/выдачи не должен откатывать сам факт завершения аукциона.
+        // NOTE: сначала выдаём предмет, потом списываем деньги — если выдача упадёт, деньги не пропадут зря.
         try
         {
-            await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
             await _catalogClient.AwardItemAsync(lobby.ItemId, lobby.WinnerId.Value, cancellationToken);
+            await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
         }
         catch (Exception ex)
         {

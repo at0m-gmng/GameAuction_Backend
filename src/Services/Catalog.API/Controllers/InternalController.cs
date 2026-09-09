@@ -28,22 +28,22 @@ public sealed record AwardItemRequest(Guid PlayerId, int Quantity);
 public sealed class InternalController : ControllerBase
 {
     private readonly GrantItemCommandHandler _grantItem;
-    private readonly BuyItemCommandHandler _buyItem;
+    private readonly AwardItemCommandHandler _awardItem;
     private readonly IInternalCallerValidator _internalCallerValidator;
 
     /// <summary>
     /// Инициализирует контроллер хендлерами и валидатором внутренних вызовов.
     /// </summary>
     /// <param name="grantItem">Хендлер выдачи предмета.</param>
-    /// <param name="buyItem">Хендлер покупки/передачи предмета.</param>
+    /// <param name="awardItem">Хендлер передачи предмета победителю аукциона.</param>
     /// <param name="internalCallerValidator">Проверка X-Internal-Key.</param>
     public InternalController(
         GrantItemCommandHandler grantItem,
-        BuyItemCommandHandler buyItem,
+        AwardItemCommandHandler awardItem,
         IInternalCallerValidator internalCallerValidator)
     {
         _grantItem = grantItem;
-        _buyItem = buyItem;
+        _awardItem = awardItem;
         _internalCallerValidator = internalCallerValidator;
     }
 
@@ -92,7 +92,7 @@ public sealed class InternalController : ControllerBase
 
         try
         {
-            await _buyItem.Handle(new BuyItemCommand(request.PlayerId, itemId, request.Quantity), ct);
+            await _awardItem.Handle(new AwardItemCommand(request.PlayerId, itemId, request.Quantity), ct);
             return NoContent();
         }
         catch (InvalidOperationException ex)
