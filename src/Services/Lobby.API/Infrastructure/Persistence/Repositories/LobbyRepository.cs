@@ -58,7 +58,18 @@ public class LobbyRepository : ILobbyRepository
     public async Task SaveAsync(LobbyAggregate lobby, CancellationToken cancellationToken = default)
     {
         if (_context.Entry(lobby).State == EntityState.Detached)
+        {
             _context.Lobbies.Add(lobby);
+        }
+        else
+        {
+            // NOTE: Bid.Id генерируется в домене до EF — DetectChanges видит непустой ключ и шлёт UPDATE, а не INSERT.
+            foreach (var bid in lobby.Bids)
+            {
+                if (_context.Entry(bid).State == EntityState.Detached)
+                    _context.Entry(bid).State = EntityState.Added;
+            }
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 
