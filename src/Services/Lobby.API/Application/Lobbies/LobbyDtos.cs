@@ -15,6 +15,7 @@ public sealed record LobbyListDto(
     LobbyStatus Status,
     int SlotsTaken,
     int MaxSlots,
+    int BidderCount,
     decimal CurrentBid,
     DateTime? EndsAt);
 

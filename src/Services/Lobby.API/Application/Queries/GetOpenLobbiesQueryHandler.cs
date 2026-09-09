@@ -58,6 +58,7 @@ public sealed class GetOpenLobbiesQueryHandler : IQueryHandler<GetOpenLobbiesQue
         lobby.Status,
         lobby.Participants.Count,
         lobby.MaxParticipants,
+        lobby.Bids.Select(b => b.PlayerId).Distinct().Count(),
         lobby.CurrentBid?.Amount ?? lobby.StartingPrice,
         lobby.EndsAt);
 }
