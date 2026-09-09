@@ -11,6 +11,8 @@ namespace GameBackend.Services.Lobby.API.Application.Queries;
 /// </summary>
 public sealed class GetOpenLobbiesQueryHandler : IQueryHandler<GetOpenLobbiesQuery, IReadOnlyCollection<LobbyListDto>>
 {
+    private const int RecentCompletedLimit = 50;
+
     private readonly ILobbyRepository _repository;
     private readonly AuctionCompletionService _auctionCompletion;
 
@@ -26,19 +28,23 @@ public sealed class GetOpenLobbiesQueryHandler : IQueryHandler<GetOpenLobbiesQue
     }
 
     /// <summary>
-    /// Возвращает список открытых лобби, лениво завершая просроченные (нет таймера — Render засыпает).
+    /// Возвращает активные лобби и последние завершённые, лениво завершая просроченные (нет таймера — Render засыпает).
     /// </summary>
     /// <param name="query">Запрос.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     public async Task<IReadOnlyCollection<LobbyListDto>> Handle(GetOpenLobbiesQuery query, CancellationToken cancellationToken)
     {
-        var lobbies = await _repository.GetOpenLobbiesAsync(cancellationToken);
+        var open = await _repository.GetOpenLobbiesAsync(cancellationToken);
 
-        foreach (var lobby in lobbies)
+        foreach (var lobby in open)
             await _auctionCompletion.CompleteIfExpiredAsync(lobby, cancellationToken);
 
-        return lobbies
+        // NOTE: завершённые тянем после цикла — так в список попадут и только что закрывшиеся этим же запросом.
+        var completed = await _repository.GetRecentCompletedLobbiesAsync(RecentCompletedLimit, cancellationToken);
+
+        return open
             .Where(l => l.Status is LobbyStatus.Gathering or LobbyStatus.Bidding)
+            .Concat(completed)
             .Select(ToListDto)
             .ToArray();
     }

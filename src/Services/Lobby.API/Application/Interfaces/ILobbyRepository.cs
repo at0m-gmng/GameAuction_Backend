@@ -16,11 +16,27 @@ public interface ILobbyRepository
     Task<LobbyAggregate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Получает открытые лобби (Gathering и Bidding).
+    /// Получает открытые лобби (Gathering и Bidding) вместе со ставками.
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция открытых лобби.</returns>
     Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Получает последние завершённые лобби (со ставками) для показа в общем списке аукционов.
+    /// </summary>
+    /// <param name="limit">Максимальное количество.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Коллекция завершённых лобби, новые первыми.</returns>
+    Task<IReadOnlyCollection<LobbyAggregate>> GetRecentCompletedLobbiesAsync(int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Получает завершённые аукционы игрока, где он делал ставку (со ставками) — история для профиля.
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Коллекция завершённых аукционов игрока, новые первыми.</returns>
+    Task<IReadOnlyCollection<LobbyAggregate>> GetPlayerHistoryAsync(Guid playerId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Считает завершённые аукционы игрока, где он делал ставку — победы и поражения.

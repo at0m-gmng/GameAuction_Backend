@@ -45,8 +45,40 @@ public class LobbyRepository : ILobbyRepository
     public async Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Lobbies
+            .Include(x => x.Bids)
             .Where(x => x.Status == LobbyStatus.Gathering || x.Status == LobbyStatus.Bidding)
             .OrderBy(x => x.EndsAt)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Получает последние завершённые лобби со ставками для показа в общем списке аукционов.
+    /// </summary>
+    /// <param name="limit">Максимальное количество.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Коллекция завершённых лобби, новые первыми.</returns>
+    public async Task<IReadOnlyCollection<LobbyAggregate>> GetRecentCompletedLobbiesAsync(int limit, CancellationToken cancellationToken = default)
+    {
+        return await _context.Lobbies
+            .Include(x => x.Bids)
+            .Where(x => x.Status == LobbyStatus.Completed)
+            .OrderByDescending(x => x.EndsAt)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Получает завершённые аукционы игрока со ставками, где он участвовал ставкой — история для профиля.
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Коллекция завершённых аукционов игрока, новые первыми.</returns>
+    public async Task<IReadOnlyCollection<LobbyAggregate>> GetPlayerHistoryAsync(Guid playerId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Lobbies
+            .Include(x => x.Bids)
+            .Where(x => x.Status == LobbyStatus.Completed && x.Bids.Any(b => b.PlayerId == playerId))
+            .OrderByDescending(x => x.EndsAt)
             .ToListAsync(cancellationToken);
     }
 

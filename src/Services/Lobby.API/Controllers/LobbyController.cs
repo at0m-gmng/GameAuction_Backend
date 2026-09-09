@@ -35,6 +35,7 @@ public sealed class LobbyController : ControllerBase
     private readonly GetOpenLobbiesQueryHandler _openLobbies;
     private readonly GetLobbyQueryHandler _getLobby;
     private readonly GetPlayerAuctionStatsQueryHandler _playerStats;
+    private readonly GetPlayerAuctionHistoryQueryHandler _playerHistory;
     private readonly IInternalCallerValidator _internalCallerValidator;
 
     /// <summary>
@@ -48,6 +49,7 @@ public sealed class LobbyController : ControllerBase
         GetOpenLobbiesQueryHandler openLobbies,
         GetLobbyQueryHandler getLobby,
         GetPlayerAuctionStatsQueryHandler playerStats,
+        GetPlayerAuctionHistoryQueryHandler playerHistory,
         IInternalCallerValidator internalCallerValidator)
     {
         _create = create;
@@ -57,6 +59,7 @@ public sealed class LobbyController : ControllerBase
         _openLobbies = openLobbies;
         _getLobby = getLobby;
         _playerStats = playerStats;
+        _playerHistory = playerHistory;
         _internalCallerValidator = internalCallerValidator;
     }
 
@@ -81,6 +84,20 @@ public sealed class LobbyController : ControllerBase
         if (playerId is null) return Unauthorized();
 
         var result = await _playerStats.Handle(new GetPlayerAuctionStatsQuery(playerId.Value), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Возвращает историю завершённых аукционов вызывающего игрока. Требует JWT-токен.
+    /// </summary>
+    [Authorize]
+    [HttpGet("history/me")]
+    public async Task<ActionResult<IReadOnlyCollection<PlayerAuctionHistoryDto>>> GetMyAuctionHistory(CancellationToken ct = default)
+    {
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        var result = await _playerHistory.Handle(new GetPlayerAuctionHistoryQuery(playerId.Value), ct);
         return Ok(result);
     }
 

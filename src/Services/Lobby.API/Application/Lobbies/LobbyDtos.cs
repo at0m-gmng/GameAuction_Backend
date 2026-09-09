@@ -49,3 +49,15 @@ public sealed record LobbyDetailsDto(
 /// DTO статистики побед и поражений игрока (экран "Профиль").
 /// </summary>
 public sealed record PlayerAuctionStatsDto(int Wins, int Losses);
+
+/// <summary>
+/// DTO строки истории аукционов игрока (экран "Профиль").
+/// </summary>
+public sealed record PlayerAuctionHistoryDto(
+    Guid LobbyId,
+    string ItemName,
+    string? ItemImageUrl,
+    ItemRarity ItemRarity,
+    decimal FinalPrice,
+    bool Won,
+    DateTime? EndedAt);
