@@ -30,6 +30,7 @@ public sealed class CatalogController : ControllerBase
     private readonly GetInventoryQueryHandler _getInventory;
     private readonly BuyItemCommandHandler _buy;
     private readonly ListInventoryItemForSaleCommandHandler _listForSale;
+    private readonly UnlistItemCommandHandler _unlistItem;
     private readonly StartAuctionCommandHandler _startAuction;
 
     /// <summary>
@@ -39,18 +40,21 @@ public sealed class CatalogController : ControllerBase
     /// <param name="getInventory">Запрос инвентаря.</param>
     /// <param name="buy">Команда покупки.</param>
     /// <param name="listForSale">Команда выставления предмета на продажу.</param>
+    /// <param name="unlistItem">Команда снятия предмета с продажи.</param>
     /// <param name="startAuction">Команда запуска аукциона по предмету.</param>
     public CatalogController(
         GetItemsQueryHandler getItems,
         GetInventoryQueryHandler getInventory,
         BuyItemCommandHandler buy,
         ListInventoryItemForSaleCommandHandler listForSale,
+        UnlistItemCommandHandler unlistItem,
         StartAuctionCommandHandler startAuction)
     {
         _getItems = getItems;
         _getInventory = getInventory;
         _buy = buy;
         _listForSale = listForSale;
+        _unlistItem = unlistItem;
         _startAuction = startAuction;
     }
 
@@ -120,6 +124,27 @@ public sealed class CatalogController : ControllerBase
             return NoContent();
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Снимает предмет с продажи и возвращает его в инвентарь. Требует JWT-токен.
+    /// </summary>
+    [Authorize]
+    [HttpPost("inventory/{itemId:guid}/unlist")]
+    public async Task<IActionResult> UnlistItem(Guid itemId, CancellationToken ct = default)
+    {
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        try
+        {
+            await _unlistItem.Handle(new UnlistItemCommand(playerId.Value, itemId), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }

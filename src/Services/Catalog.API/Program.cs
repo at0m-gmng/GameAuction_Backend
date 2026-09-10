@@ -41,6 +41,7 @@ builder.Services.AddScoped<BuyItemCommandHandler>();
 builder.Services.AddScoped<AwardItemCommandHandler>();
 builder.Services.AddScoped<GrantItemCommandHandler>();
 builder.Services.AddScoped<ListInventoryItemForSaleCommandHandler>();
+builder.Services.AddScoped<UnlistItemCommandHandler>();
 builder.Services.AddScoped<StartAuctionCommandHandler>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 
