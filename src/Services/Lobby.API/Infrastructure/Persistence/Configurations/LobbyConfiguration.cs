@@ -56,5 +56,11 @@ public class LobbyConfiguration : IEntityTypeConfiguration<LobbyAggregate>
         builder.Ignore(x => x.CurrentBid);
 
         builder.HasIndex(x => x.Status);
+
+        // NOTE: уникальный индекс на (ItemId, Status) для открытых лобби предотвращает race condition
+        // при одновременном старте аукциона несколькими игроками — база не даст создать дубль.
+        builder.HasIndex(x => new { x.ItemId, x.Status })
+            .HasFilter("\"Status\" IN (0, 1)")
+            .IsUnique();
     }
 }
