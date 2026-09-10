@@ -1,43 +1,35 @@
 using GameBackend.Services.Catalog.API.Application.Interfaces;
-using GameBackend.Services.Catalog.API.Infrastructure.ExternalServices;
 using GameBackend.SharedKernel.Application;
 
 namespace GameBackend.Services.Catalog.API.Application.Commands;
 
 /// <summary>
-/// Обработчик команды выставления предмета из инвентаря на аукцион.
+/// Обработчик команды выставления предмета из инвентаря на продажу.
 /// </summary>
-public sealed class ListInventoryItemForAuctionCommandHandler : ICommandHandler<ListInventoryItemForAuctionCommand, Guid>
+public sealed class ListInventoryItemForSaleCommandHandler : ICommandHandler<ListInventoryItemForSaleCommand>
 {
-    private const int DefaultMaxParticipants = 5;
-
     private readonly IInventoryRepository _inventoryRepository;
     private readonly IItemRepository _itemRepository;
-    private readonly ILobbyServiceClient _lobbyClient;
 
     /// <summary>
     /// Инициализирует обработчик зависимостями.
     /// </summary>
     /// <param name="inventoryRepository">Репозиторий инвентаря.</param>
     /// <param name="itemRepository">Репозиторий предметов каталога.</param>
-    /// <param name="lobbyClient">Клиент к Lobby.API.</param>
-    public ListInventoryItemForAuctionCommandHandler(
+    public ListInventoryItemForSaleCommandHandler(
         IInventoryRepository inventoryRepository,
-        IItemRepository itemRepository,
-        ILobbyServiceClient lobbyClient)
+        IItemRepository itemRepository)
     {
         _inventoryRepository = inventoryRepository;
         _itemRepository = itemRepository;
-        _lobbyClient = lobbyClient;
     }
 
     /// <summary>
-    /// Создаёт лобби для предмета и только затем списывает его из инвентаря игрока.
+    /// Помечает предмет выставленным по цене и списывает его из инвентаря игрока; лобби не создаёт.
     /// </summary>
     /// <param name="command">Команда.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
-    /// <returns>Идентификатор созданного лобби.</returns>
-    public async Task<Guid> Handle(ListInventoryItemForAuctionCommand command, CancellationToken cancellationToken)
+    public async Task Handle(ListInventoryItemForSaleCommand command, CancellationToken cancellationToken)
     {
         if (command.StartingPrice <= 0)
             throw new ArgumentOutOfRangeException(nameof(command.StartingPrice), "Стартовая цена должна быть больше нуля");
@@ -49,15 +41,8 @@ public sealed class ListInventoryItemForAuctionCommandHandler : ICommandHandler<
         var item = await _itemRepository.GetByIdAsync(command.ItemId, cancellationToken)
                    ?? throw new InvalidOperationException($"Предмет {command.ItemId} не найден в каталоге");
 
-        // NOTE: сначала лобби, инвентарь — только при успехе; иначе при сбое Lobby.API игрок теряет вещь без аукциона.
-        var lobbyId = await _lobbyClient.CreateLobbyAsync(
-            item.Id,
-            item.Name,
-            item.ImageUrl,
-            item.Rarity,
-            command.StartingPrice,
-            DefaultMaxParticipants,
-            cancellationToken);
+        item.ListForSale(command.StartingPrice);
+        await _itemRepository.SaveAsync(item, cancellationToken);
 
         inventoryItem.RemoveQuantity(1);
 
@@ -65,7 +50,5 @@ public sealed class ListInventoryItemForAuctionCommandHandler : ICommandHandler<
             await _inventoryRepository.DeleteAsync(inventoryItem, cancellationToken);
         else
             await _inventoryRepository.SaveAsync(inventoryItem, cancellationToken);
-
-        return lobbyId;
     }
 }

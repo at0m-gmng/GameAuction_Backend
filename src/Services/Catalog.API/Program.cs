@@ -40,7 +40,8 @@ builder.Services.AddScoped<GetInventoryQueryHandler>();
 builder.Services.AddScoped<BuyItemCommandHandler>();
 builder.Services.AddScoped<AwardItemCommandHandler>();
 builder.Services.AddScoped<GrantItemCommandHandler>();
-builder.Services.AddScoped<ListInventoryItemForAuctionCommandHandler>();
+builder.Services.AddScoped<ListInventoryItemForSaleCommandHandler>();
+builder.Services.AddScoped<StartAuctionCommandHandler>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 
 var internalApi = builder.Configuration.GetSection(InternalApiSettings.SectionName).Get<InternalApiSettings>()

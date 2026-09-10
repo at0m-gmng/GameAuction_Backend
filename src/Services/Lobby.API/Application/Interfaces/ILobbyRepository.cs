@@ -16,6 +16,14 @@ public interface ILobbyRepository
     Task<LobbyAggregate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Получает открытое лобби (Gathering или Bidding) для предмета — чтобы не создавать дубль аукциона.
+    /// </summary>
+    /// <param name="itemId">Идентификатор предмета.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Открытое лобби предмета или null.</returns>
+    Task<LobbyAggregate?> GetOpenLobbyByItemIdAsync(Guid itemId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Получает открытые лобби (Gathering и Bidding) вместе со ставками.
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>

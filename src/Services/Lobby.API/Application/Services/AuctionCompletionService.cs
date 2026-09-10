@@ -55,7 +55,7 @@ public sealed class AuctionCompletionService
     }
 
     /// <summary>
-    /// Завершает аукцион, сохраняет лобби и best-effort рассчитывается с победителем.
+    /// Завершает аукцион, сохраняет лобби и best-effort рассчитывается с победителем и продавцом.
     /// </summary>
     /// <param name="lobby">Уже загруженный агрегат лобби.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -68,11 +68,18 @@ public sealed class AuctionCompletionService
         if (lobby.WinnerId is null || lobby.CurrentBid is null)
             return;
 
-        // NOTE: сначала выдаём предмет, потом списываем деньги — если выдача упадёт, деньги не пропадут зря.
         try
         {
-            await _catalogClient.AwardItemAsync(lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+            var sellerId = await _catalogClient.AwardItemAsync(lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+
             await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+
+            if (sellerId.HasValue)
+            {
+                await _identityClient.CreditAsync(sellerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+                _logger.LogInformation("Продавец {SellerId} получил {Amount} за предмет {ItemId} в лобби {LobbyId}",
+                    sellerId.Value, lobby.CurrentBid.Amount, lobby.ItemId, lobby.Id);
+            }
         }
         catch (Exception ex)
         {

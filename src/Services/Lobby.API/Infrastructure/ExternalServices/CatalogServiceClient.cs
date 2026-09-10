@@ -14,7 +14,7 @@ public sealed class CatalogServiceClient : ICatalogServiceClient
         _httpClient = httpClient;
     }
 
-    public async Task AwardItemAsync(Guid itemId, Guid winnerId, decimal price, CancellationToken cancellationToken = default)
+    public async Task<Guid?> AwardItemAsync(Guid itemId, Guid winnerId, decimal price, CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.PostAsJsonAsync(
             $"api/catalog/internal/items/{itemId}/award",
@@ -22,5 +22,7 @@ public sealed class CatalogServiceClient : ICatalogServiceClient
             cancellationToken);
 
         response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<Guid?>(cancellationToken: cancellationToken);
     }
 }

@@ -58,8 +58,8 @@ public class ItemRepository : IItemRepository
         int take,
         CancellationToken cancellationToken = default)
     {
-        // NOTE: приватные предметы (OwnerId != null) не должны попадать в публичную витрину.
-        var query = _context.Items.Where(x => x.OwnerId == null);
+        // NOTE: каталог — это витрина выставленных лотов; невыставленные (в т.ч. инвентарь игроков) сюда не попадают.
+        var query = _context.Items.Where(x => x.IsListed);
 
         if (category.HasValue)
             query = query.Where(x => x.Category == category.Value);

@@ -28,6 +28,11 @@ public sealed class CreateLobbyCommandHandler : ICommandHandler<CreateLobbyComma
     /// <returns>Идентификатор созданного лобби.</returns>
     public async Task<Guid> Handle(CreateLobbyCommand command, CancellationToken cancellationToken)
     {
+        // NOTE: create-or-get — если по предмету уже идёт аукцион, отдаём его, а не плодим второе лобби.
+        var existing = await _repository.GetOpenLobbyByItemIdAsync(command.ItemId, cancellationToken);
+        if (existing is not null)
+            return existing.Id;
+
         var lobby = LobbyAggregate.Create(
             command.ItemId,
             command.ItemName,

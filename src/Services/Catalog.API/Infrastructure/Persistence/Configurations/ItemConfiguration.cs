@@ -23,6 +23,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(x => x.Description).HasMaxLength(2000);
         builder.Property(x => x.ImageUrl).HasMaxLength(2000);
         builder.Property(x => x.StartingPrice).HasPrecision(18, 2);
+        builder.Property(x => x.IsListed).IsRequired();
         builder.Property(x => x.CreatedAt).IsRequired();
 
         // NOTE: Rarity — int, а не enum-строка, чтобы фильтр ">=" сравнивал значения, а не строки.
@@ -34,6 +35,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.HasIndex(x => x.Category);
         builder.HasIndex(x => x.Rarity);
         builder.HasIndex(x => x.OwnerId);
+        builder.HasIndex(x => x.IsListed);
 
         builder.Ignore(x => x.DomainEvents);
     }

@@ -7,7 +7,7 @@ namespace GameBackend.Services.Catalog.API.Application.Commands;
 /// <summary>
 /// Обработчик выдачи предмета победителю аукциона: кладёт предмет в инвентарь, склад каталога не трогает.
 /// </summary>
-public sealed class AwardItemCommandHandler : ICommandHandler<AwardItemCommand>
+public sealed class AwardItemCommandHandler : ICommandHandler<AwardItemCommand, Guid?>
 {
     private readonly IItemRepository _itemRepository;
     private readonly IInventoryRepository _inventoryRepository;
@@ -25,17 +25,22 @@ public sealed class AwardItemCommandHandler : ICommandHandler<AwardItemCommand>
 
     /// <summary>
     /// Начисляет победителю предмет в инвентарь и переписывает цену каталога на цену продажи; склад не трогает.
+    /// Возвращает OwnerId предмета (продавца), если предмет был выставлен игроком, иначе null.
     /// </summary>
     /// <param name="command">Команда.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
-    public async Task Handle(AwardItemCommand command, CancellationToken cancellationToken)
+    /// <returns>OwnerId предмета (продавца) или null для публичного предмета.</returns>
+    public async Task<Guid?> Handle(AwardItemCommand command, CancellationToken cancellationToken)
     {
         var quantity = command.Quantity < 1 ? 1 : command.Quantity;
 
         var item = await _itemRepository.GetByIdAsync(command.ItemId, cancellationToken)
             ?? throw new InvalidOperationException("Предмет не найден");
 
+        var sellerId = item.OwnerId;
+
         item.UpdatePrice(command.Price);
+        item.Unlist();
         await _itemRepository.SaveAsync(item, cancellationToken);
 
         var inventoryItem = await _inventoryRepository.GetByPlayerAndItemAsync(
@@ -55,5 +60,7 @@ public sealed class AwardItemCommandHandler : ICommandHandler<AwardItemCommand>
         }
 
         await _inventoryRepository.SaveAsync(inventoryItem, cancellationToken);
+
+        return sellerId;
     }
 }

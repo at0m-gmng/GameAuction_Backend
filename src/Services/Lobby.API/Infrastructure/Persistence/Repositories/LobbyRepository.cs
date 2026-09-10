@@ -38,6 +38,21 @@ public class LobbyRepository : ILobbyRepository
     }
 
     /// <summary>
+    /// Получает открытое лобби (Gathering или Bidding) для предмета — чтобы не плодить дубли аукциона.
+    /// </summary>
+    /// <param name="itemId">Идентификатор предмета.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Открытое лобби предмета или null.</returns>
+    public async Task<LobbyAggregate?> GetOpenLobbyByItemIdAsync(Guid itemId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Lobbies
+            .Include(x => x.Bids)
+            .FirstOrDefaultAsync(
+                x => x.ItemId == itemId && (x.Status == LobbyStatus.Gathering || x.Status == LobbyStatus.Bidding),
+                cancellationToken);
+    }
+
+    /// <summary>
     /// Получает открытые лобби (Gathering и Bidding).
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>

@@ -61,6 +61,7 @@ if (string.IsNullOrWhiteSpace(internalApi.CatalogBaseUrl))
 // NOTE: тот же ключ и на вход (Lobby.API дёргает /internal/debit), и на выход (звонки в Catalog/Generation).
 builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApi.Key));
 builder.Services.AddScoped<DebitBalanceCommandHandler>();
+builder.Services.AddScoped<CreditBalanceCommandHandler>();
 builder.Services.AddScoped<GetPlayerBalanceQueryHandler>();
 
 // NOTE: короткий таймаут — недоступность Generation/Catalog.API не должна задерживать вход.

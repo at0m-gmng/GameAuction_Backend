@@ -80,20 +80,21 @@ public sealed class InternalController : ControllerBase
 
     /// <summary>
     /// Списывает остаток публичного предмета и передаёт его победителю аукциона.
+    /// Возвращает идентификатор продавца (OwnerId), если предмет был выставлен игроком.
     /// </summary>
     /// <param name="itemId">Идентификатор предмета каталога.</param>
     /// <param name="request">Получатель и количество.</param>
     /// <param name="ct">Токен отмены.</param>
     [HttpPost("items/{itemId:guid}/award")]
-    public async Task<IActionResult> AwardItem(Guid itemId, [FromBody] AwardItemRequest request, CancellationToken ct = default)
+    public async Task<ActionResult<Guid?>> AwardItem(Guid itemId, [FromBody] AwardItemRequest request, CancellationToken ct = default)
     {
         if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
             return Unauthorized();
 
         try
         {
-            await _awardItem.Handle(new AwardItemCommand(request.PlayerId, itemId, request.Quantity, request.Price), ct);
-            return NoContent();
+            var sellerId = await _awardItem.Handle(new AwardItemCommand(request.PlayerId, itemId, request.Quantity, request.Price), ct);
+            return Ok(sellerId);
         }
         catch (InvalidOperationException ex)
         {

@@ -15,9 +15,9 @@ namespace GameBackend.Services.Catalog.API.Controllers;
 public sealed record BuyItemRequest(Guid ItemId, int Quantity = 1);
 
 /// <summary>
-/// Контракт запроса на выставление предмета из инвентаря на аукцион.
+/// Контракт запроса на выставление предмета из инвентаря на продажу.
 /// </summary>
-public sealed record ListForAuctionRequest(decimal StartingPrice);
+public sealed record ListForSaleRequest(decimal StartingPrice);
 
 /// <summary>
 /// Эндпоинты каталога: витрина (публично), инвентарь и покупка (по токену).
@@ -29,7 +29,8 @@ public sealed class CatalogController : ControllerBase
     private readonly GetItemsQueryHandler _getItems;
     private readonly GetInventoryQueryHandler _getInventory;
     private readonly BuyItemCommandHandler _buy;
-    private readonly ListInventoryItemForAuctionCommandHandler _listForAuction;
+    private readonly ListInventoryItemForSaleCommandHandler _listForSale;
+    private readonly StartAuctionCommandHandler _startAuction;
 
     /// <summary>
     /// Инициализирует контроллер обработчиками.
@@ -37,17 +38,20 @@ public sealed class CatalogController : ControllerBase
     /// <param name="getItems">Запрос витрины.</param>
     /// <param name="getInventory">Запрос инвентаря.</param>
     /// <param name="buy">Команда покупки.</param>
-    /// <param name="listForAuction">Команда выставления предмета на аукцион.</param>
+    /// <param name="listForSale">Команда выставления предмета на продажу.</param>
+    /// <param name="startAuction">Команда запуска аукциона по предмету.</param>
     public CatalogController(
         GetItemsQueryHandler getItems,
         GetInventoryQueryHandler getInventory,
         BuyItemCommandHandler buy,
-        ListInventoryItemForAuctionCommandHandler listForAuction)
+        ListInventoryItemForSaleCommandHandler listForSale,
+        StartAuctionCommandHandler startAuction)
     {
         _getItems = getItems;
         _getInventory = getInventory;
         _buy = buy;
-        _listForAuction = listForAuction;
+        _listForSale = listForSale;
+        _startAuction = startAuction;
     }
 
     /// <summary>
@@ -101,24 +105,42 @@ public sealed class CatalogController : ControllerBase
     }
 
     /// <summary>
-    /// Выставляет предмет из инвентаря на аукцион. Требует JWT-токен.
+    /// Выставляет предмет из инвентаря на продажу — он появляется в каталоге как лот. Требует JWT-токен.
     /// </summary>
     [Authorize]
-    [HttpPost("inventory/{itemId:guid}/list-for-auction")]
-    public async Task<ActionResult<Guid>> ListForAuction(Guid itemId, [FromBody] ListForAuctionRequest request, CancellationToken ct = default)
+    [HttpPost("inventory/{itemId:guid}/list-for-sale")]
+    public async Task<IActionResult> ListForSale(Guid itemId, [FromBody] ListForSaleRequest request, CancellationToken ct = default)
     {
         var playerId = GetPlayerId();
         if (playerId is null) return Unauthorized();
 
         try
         {
-            var lobbyId = await _listForAuction.Handle(
-                new ListInventoryItemForAuctionCommand(playerId.Value, itemId, request.StartingPrice),
-                ct);
-
-            return Ok(lobbyId);
+            await _listForSale.Handle(new ListInventoryItemForSaleCommand(playerId.Value, itemId, request.StartingPrice), ct);
+            return NoContent();
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentOutOfRangeException)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Запускает аукцион по выставленному предмету: создаёт лобби или отдаёт уже открытое. Требует JWT-токен.
+    /// </summary>
+    [Authorize]
+    [HttpPost("items/{itemId:guid}/start-auction")]
+    public async Task<ActionResult<Guid>> StartAuction(Guid itemId, CancellationToken ct = default)
+    {
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        try
+        {
+            var lobbyId = await _startAuction.Handle(new StartAuctionCommand(itemId), ct);
+            return Ok(lobbyId);
+        }
+        catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }

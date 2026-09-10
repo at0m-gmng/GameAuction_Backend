@@ -8,6 +8,9 @@ namespace GameBackend.Services.Identity.API.Controllers;
 /// <summary>Контракт запроса на списание средств с баланса игрока.</summary>
 public sealed record DebitBalanceRequest(decimal Amount);
 
+/// <summary>Контракт запроса на пополнение баланса игрока.</summary>
+public sealed record CreditBalanceRequest(decimal Amount);
+
 /// <summary>
 /// Внутренние эндпоинты Identity.API. Принимают только сервисы с общим секретом.
 /// </summary>
@@ -16,6 +19,7 @@ public sealed record DebitBalanceRequest(decimal Amount);
 public sealed class InternalController : ControllerBase
 {
     private readonly DebitBalanceCommandHandler _debitBalance;
+    private readonly CreditBalanceCommandHandler _creditBalance;
     private readonly GetPlayerBalanceQueryHandler _getBalance;
     private readonly IInternalCallerValidator _internalCallerValidator;
 
@@ -23,14 +27,17 @@ public sealed class InternalController : ControllerBase
     /// Инициализирует контроллер хендлерами и валидатором внутренних вызовов.
     /// </summary>
     /// <param name="debitBalance">Хендлер списания баланса.</param>
+    /// <param name="creditBalance">Хендлер пополнения баланса.</param>
     /// <param name="getBalance">Хендлер запроса баланса.</param>
     /// <param name="internalCallerValidator">Проверка X-Internal-Key.</param>
     public InternalController(
         DebitBalanceCommandHandler debitBalance,
+        CreditBalanceCommandHandler creditBalance,
         GetPlayerBalanceQueryHandler getBalance,
         IInternalCallerValidator internalCallerValidator)
     {
         _debitBalance = debitBalance;
+        _creditBalance = creditBalance;
         _getBalance = getBalance;
         _internalCallerValidator = internalCallerValidator;
     }
@@ -50,6 +57,29 @@ public sealed class InternalController : ControllerBase
         try
         {
             await _debitBalance.Handle(new DebitBalanceCommand(playerId, request.Amount), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Пополняет баланс игрока (например, получение средств от продажи на аукционе).
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="request">Сумма пополнения.</param>
+    /// <param name="ct">Токен отмены.</param>
+    [HttpPost("players/{playerId:guid}/credit")]
+    public async Task<IActionResult> CreditBalance(Guid playerId, [FromBody] CreditBalanceRequest request, CancellationToken ct = default)
+    {
+        if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
+            return Unauthorized();
+
+        try
+        {
+            await _creditBalance.Handle(new CreditBalanceCommand(playerId, request.Amount), ct);
             return NoContent();
         }
         catch (InvalidOperationException ex)

@@ -49,6 +49,11 @@ public sealed class Item : AggregateRoot
     public Guid? OwnerId { get; private set; }
 
     /// <summary>
+    /// Предмет выставлен на продажу и виден в каталоге как лот для аукциона.
+    /// </summary>
+    public bool IsListed { get; private set; }
+
+    /// <summary>
     /// Дата и время создания карточки (UTC) — по ней определяется, когда витрину пора пополнять.
     /// </summary>
     public DateTime CreatedAt { get; private set; }
@@ -202,5 +207,27 @@ public sealed class Item : AggregateRoot
             throw new ArgumentOutOfRangeException(nameof(price), "Цена не может быть отрицательной");
 
         StartingPrice = price;
+    }
+
+    /// <summary>
+    /// Выставляет предмет на продажу по стартовой цене — он появляется в каталоге как лот.
+    /// </summary>
+    /// <param name="price">Стартовая цена (должна быть больше нуля).</param>
+    /// <exception cref="ArgumentOutOfRangeException">Если цена не больше нуля.</exception>
+    public void ListForSale(decimal price)
+    {
+        if (price <= 0)
+            throw new ArgumentOutOfRangeException(nameof(price), "Цена продажи должна быть больше нуля");
+
+        StartingPrice = price;
+        IsListed = true;
+    }
+
+    /// <summary>
+    /// Снимает предмет с продажи — он исчезает из каталога лотов.
+    /// </summary>
+    public void Unlist()
+    {
+        IsListed = false;
     }
 }
