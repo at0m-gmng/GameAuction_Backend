@@ -25,6 +25,12 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
         // NOTE: уникальный индекс — у игрока ровно одна строка на тип предмета, остальное через Quantity.
         builder.HasIndex(x => new { x.PlayerId, x.ItemId }).IsUnique();
 
+        // NOTE: FK на Items с Restrict — БД не даст удалить карточку, на которую ссылается инвентарь.
+        builder.HasOne<Item>()
+            .WithMany()
+            .HasForeignKey(x => x.ItemId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Ignore(x => x.DomainEvents);
     }
 }

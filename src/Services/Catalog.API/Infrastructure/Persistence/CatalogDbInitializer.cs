@@ -53,6 +53,27 @@ public static class CatalogDbInitializer
             await context.Database.ExecuteSqlRawAsync(
                 """UPDATE "Items" SET "IsListed" = false WHERE "OwnerId" IS NULL AND "IsListed" AND "Stock" <= 0;""",
                 cancellationToken);
+
+            // NOTE: чистим сирот инвентаря (карточка удалена) — иначе FK ниже не навесится на живую таблицу.
+            await context.Database.ExecuteSqlRawAsync(
+                """DELETE FROM "InventoryItems" WHERE "ItemId" NOT IN (SELECT "Id" FROM "Items");""",
+                cancellationToken);
+
+            // NOTE: FK с Restrict — навешиваем на существующую таблицу вручную, EnsureCreated его не доливает.
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_constraint WHERE conname = 'FK_InventoryItems_Items_ItemId'
+                    ) THEN
+                        ALTER TABLE "InventoryItems"
+                            ADD CONSTRAINT "FK_InventoryItems_Items_ItemId"
+                            FOREIGN KEY ("ItemId") REFERENCES "Items" ("Id") ON DELETE RESTRICT;
+                    END IF;
+                END $$;
+                """,
+                cancellationToken);
         }
 
         // NOTE: витрина держит ровно PublicCatalogSeedCount публичных лотов — лишнее снимаем, нехватку добираем.
