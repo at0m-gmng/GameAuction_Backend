@@ -232,4 +232,13 @@ public sealed class Item : AggregateRoot
     {
         IsListed = false;
     }
+
+    /// <summary>
+    /// Передаёт карточку новому владельцу (например, победителю аукциона) — снятие/выплата пойдут ему.
+    /// </summary>
+    /// <param name="newOwnerId">Идентификатор нового владельца.</param>
+    public void TransferTo(Guid newOwnerId)
+    {
+        OwnerId = newOwnerId;
+    }
 }

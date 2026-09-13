@@ -41,6 +41,11 @@ public sealed class AwardItemCommandHandler : ICommandHandler<AwardItemCommand, 
 
         item.UpdatePrice(command.Price);
         item.Unlist();
+
+        // NOTE: приватный лот переходит победителю — иначе перепродажа спишет/выплатит старому владельцу.
+        if (sellerId.HasValue)
+            item.TransferTo(command.PlayerId);
+
         await _itemRepository.SaveAsync(item, cancellationToken);
 
         var inventoryItem = await _inventoryRepository.GetByPlayerAndItemAsync(

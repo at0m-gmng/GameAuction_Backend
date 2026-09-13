@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
 
@@ -23,6 +24,8 @@ public sealed class CatalogServiceClient : ICatalogServiceClient
 
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<Guid?>(cancellationToken: cancellationToken);
+        // NOTE: у публичного предмета продавца нет — ответ пустой; читаем как строку, чтобы не падать на пустом JSON.
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return string.IsNullOrWhiteSpace(body) ? null : JsonSerializer.Deserialize<Guid?>(body);
     }
 }
