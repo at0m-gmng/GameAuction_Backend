@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace GameBackend.Services.Lobby.API.Infrastructure.Persistence;
