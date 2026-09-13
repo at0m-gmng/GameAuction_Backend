@@ -10,7 +10,7 @@ namespace GameBackend.Services.Catalog.API.Infrastructure.Persistence;
 public static class CatalogDbInitializer
 {
     /// <summary>
-    /// Создаёт схему БД и генерирует публичные предметы витрины, если пора.
+    /// Создаёт схему БД и держит витрину на уровне PublicCatalogSeedCount публичных лотов.
     /// </summary>
     /// <param name="context">Контекст базы данных.</param>
     /// <param name="generatePublicItem">Обработчик генерации одного публичного предмета.</param>
@@ -48,29 +48,30 @@ public static class CatalogDbInitializer
             await context.Database.ExecuteSqlRawAsync(
                 """UPDATE "Items" SET "IsListed" = true WHERE "OwnerId" IS NULL AND NOT "IsListed";""",
                 cancellationToken);
+
+            // NOTE: распроданный публичный лот (Stock=0) — фантом в витрине, снимаем его из листинга.
+            await context.Database.ExecuteSqlRawAsync(
+                """UPDATE "Items" SET "IsListed" = false WHERE "OwnerId" IS NULL AND "IsListed" AND "Stock" <= 0;""",
+                cancellationToken);
         }
 
-        var newestPublicItemCreatedAt = await context.Items
-            .Where(x => x.OwnerId == null)
-            .Select(x => (DateTime?)x.CreatedAt)
-            .OrderByDescending(x => x)
-            .FirstOrDefaultAsync(cancellationToken);
+        // NOTE: витрина держит ровно PublicCatalogSeedCount публичных лотов — лишнее снимаем, нехватку добираем.
+        var listedPublicItems = await context.Items
+            .Where(x => x.OwnerId == null && x.IsListed)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
 
-        int batchSize;
-        if (newestPublicItemCreatedAt is null)
+        if (listedPublicItems.Count > marketplace.PublicCatalogSeedCount)
         {
-            batchSize = marketplace.PublicCatalogSeedCount;
-        }
-        else if (newestPublicItemCreatedAt < DateTime.UtcNow.AddHours(-marketplace.RestockIntervalHours))
-        {
-            batchSize = marketplace.RestockBatchSize;
-        }
-        else
-        {
-            return;
+            foreach (var surplus in listedPublicItems.Skip(marketplace.PublicCatalogSeedCount))
+                surplus.Unlist();
+
+            await context.SaveChangesAsync(cancellationToken);
         }
 
-        for (var i = 0; i < batchSize; i++)
+        var deficit = Math.Max(0, marketplace.PublicCatalogSeedCount - listedPublicItems.Count);
+
+        for (var i = 0; i < deficit; i++)
             await generatePublicItem.Handle(new GeneratePublicItemCommand(), cancellationToken);
     }
 }

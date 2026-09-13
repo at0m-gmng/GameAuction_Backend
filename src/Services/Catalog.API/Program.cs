@@ -55,6 +55,8 @@ if (string.IsNullOrWhiteSpace(internalApi.GenerationBaseUrl))
     throw new InvalidOperationException("InternalApi:GenerationBaseUrl не задан.");
 if (string.IsNullOrWhiteSpace(internalApi.LobbyBaseUrl))
     throw new InvalidOperationException("InternalApi:LobbyBaseUrl не задан.");
+if (string.IsNullOrWhiteSpace(internalApi.IdentityBaseUrl))
+    throw new InvalidOperationException("InternalApi:IdentityBaseUrl не задан.");
 
 builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApi.Key));
 
@@ -68,6 +70,13 @@ builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient
 builder.Services.AddHttpClient<ILobbyServiceClient, LobbyServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.LobbyBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(5);
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
+});
+
+builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(internalApi.IdentityBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(5);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 });

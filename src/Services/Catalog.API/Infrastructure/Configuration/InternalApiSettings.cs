@@ -24,4 +24,9 @@ public sealed class InternalApiSettings
     /// Базовый адрес Lobby.API.
     /// </summary>
     public string LobbyBaseUrl { get; set; } = default!;
+
+    /// <summary>
+    /// Базовый адрес Identity.API.
+    /// </summary>
+    public string IdentityBaseUrl { get; set; } = default!;
 }

@@ -11,17 +11,7 @@ public sealed class MarketplaceSettings
     public const string SectionName = "Marketplace";
 
     /// <summary>
-    /// Сколько публичных предметов сгенерировать, если витрина пуста.
+    /// Сколько публичных предметов должно одновременно быть в витрине; продажи пополняются до этого числа.
     /// </summary>
     public int PublicCatalogSeedCount { get; set; } = 8;
-
-    /// <summary>
-    /// Сколько предметов добавлять при очередном пополнении витрины.
-    /// </summary>
-    public int RestockBatchSize { get; set; } = 8;
-
-    /// <summary>
-    /// Минимальный интервал между пополнениями витрины.
-    /// </summary>
-    public int RestockIntervalHours { get; set; } = 24;
 }
