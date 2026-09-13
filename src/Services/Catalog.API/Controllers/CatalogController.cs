@@ -28,6 +28,7 @@ public sealed class CatalogController : ControllerBase
 {
     private readonly GetItemsQueryHandler _getItems;
     private readonly GetInventoryQueryHandler _getInventory;
+    private readonly GetMyListingsQueryHandler _getMyListings;
     private readonly BuyItemCommandHandler _buy;
     private readonly ListInventoryItemForSaleCommandHandler _listForSale;
     private readonly UnlistItemCommandHandler _unlistItem;
@@ -38,6 +39,7 @@ public sealed class CatalogController : ControllerBase
     /// </summary>
     /// <param name="getItems">Запрос витрины.</param>
     /// <param name="getInventory">Запрос инвентаря.</param>
+    /// <param name="getMyListings">Запрос собственных выставленных лотов.</param>
     /// <param name="buy">Команда покупки.</param>
     /// <param name="listForSale">Команда выставления предмета на продажу.</param>
     /// <param name="unlistItem">Команда снятия предмета с продажи.</param>
@@ -45,6 +47,7 @@ public sealed class CatalogController : ControllerBase
     public CatalogController(
         GetItemsQueryHandler getItems,
         GetInventoryQueryHandler getInventory,
+        GetMyListingsQueryHandler getMyListings,
         BuyItemCommandHandler buy,
         ListInventoryItemForSaleCommandHandler listForSale,
         UnlistItemCommandHandler unlistItem,
@@ -52,6 +55,7 @@ public sealed class CatalogController : ControllerBase
     {
         _getItems = getItems;
         _getInventory = getInventory;
+        _getMyListings = getMyListings;
         _buy = buy;
         _listForSale = listForSale;
         _unlistItem = unlistItem;
@@ -84,6 +88,20 @@ public sealed class CatalogController : ControllerBase
         if (playerId is null) return Unauthorized();
 
         var result = await _getInventory.Handle(new GetInventoryQuery(playerId.Value), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Предметы, которые текущий игрок выставил на продажу. Требует JWT-токен.
+    /// </summary>
+    [Authorize]
+    [HttpGet("my-listings")]
+    public async Task<ActionResult<IReadOnlyCollection<ItemCatalogDto>>> GetMyListings(CancellationToken ct = default)
+    {
+        var playerId = GetPlayerId();
+        if (playerId is null) return Unauthorized();
+
+        var result = await _getMyListings.Handle(new GetMyListingsQuery(playerId.Value), ct);
         return Ok(result);
     }
 

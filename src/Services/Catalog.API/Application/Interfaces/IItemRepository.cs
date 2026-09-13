@@ -41,6 +41,14 @@ public interface IItemRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Получает выставленные на продажу предметы конкретного владельца.
+    /// </summary>
+    /// <param name="ownerId">Идентификатор игрока-владельца.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Коллекция выставленных предметов владельца.</returns>
+    Task<IReadOnlyCollection<Item>> GetListedByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Сохраняет предмет в хранилище.
     /// </summary>
     /// <param name="item">Предмет для сохранения.</param>

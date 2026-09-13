@@ -37,6 +37,7 @@ builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<CreateItemCommandHandler>();
 builder.Services.AddScoped<GetItemsQueryHandler>();
 builder.Services.AddScoped<GetInventoryQueryHandler>();
+builder.Services.AddScoped<GetMyListingsQueryHandler>();
 builder.Services.AddScoped<BuyItemCommandHandler>();
 builder.Services.AddScoped<AwardItemCommandHandler>();
 builder.Services.AddScoped<GrantItemCommandHandler>();

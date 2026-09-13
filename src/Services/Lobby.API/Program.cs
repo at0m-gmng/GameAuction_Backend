@@ -142,7 +142,7 @@ app.MapHub<LobbyHub>("/hubs/lobby");
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<LobbyDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    await LobbyDbInitializer.InitializeAsync(db, app.Logger);
 }
 
 app.Run();

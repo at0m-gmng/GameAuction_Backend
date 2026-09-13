@@ -75,6 +75,20 @@ public class ItemRepository : IItemRepository
     }
 
     /// <summary>
+    /// Получает выставленные на продажу предметы конкретного владельца.
+    /// </summary>
+    /// <param name="ownerId">Идентификатор игрока-владельца.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Коллекция выставленных предметов владельца.</returns>
+    public async Task<IReadOnlyCollection<Item>> GetListedByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Items
+            .Where(x => x.IsListed && x.OwnerId == ownerId)
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// Сохраняет предмет (создаёт или обновляет).
     /// </summary>
     /// <param name="item">Предмет для сохранения.</param>
