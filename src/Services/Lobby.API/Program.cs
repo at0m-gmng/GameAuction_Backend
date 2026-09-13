@@ -11,6 +11,7 @@ using GameBackend.Services.Lobby.API.Infrastructure.Persistence.Repositories;
 using GameBackend.SharedKernel.Application;
 using GameBackend.SharedKernel.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -23,6 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 
 builder.Services.AddCors(options =>
 {
@@ -109,6 +111,18 @@ builder.Services
     {
         // NOTE: без этого JwtBearerHandler молча переименовывает claim "sub" в легаси ClaimTypes.NameIdentifier.
         options.MapInboundClaims = false;
+
+        // NOTE: WebSocket не шлёт заголовок Authorization — токен хаба берём из query-string access_token.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs/lobby"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+        };
 
         options.TokenValidationParameters = new TokenValidationParameters
         {

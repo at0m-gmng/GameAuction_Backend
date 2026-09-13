@@ -1,6 +1,8 @@
 using GameBackend.Services.Lobby.API.Application.Interfaces;
 using GameBackend.Services.Lobby.API.Domain;
+using GameBackend.Services.Lobby.API.Hubs;
 using GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
 namespace GameBackend.Services.Lobby.API.Application.Services;
@@ -13,6 +15,7 @@ public sealed class AuctionCompletionService
     private readonly ILobbyRepository _repository;
     private readonly IIdentityServiceClient _identityClient;
     private readonly ICatalogServiceClient _catalogClient;
+    private readonly IHubContext<LobbyHub> _hub;
     private readonly ILogger<AuctionCompletionService> _logger;
 
     /// <summary>
@@ -21,16 +24,19 @@ public sealed class AuctionCompletionService
     /// <param name="repository">Репозиторий лобби.</param>
     /// <param name="identityClient">Клиент к Identity.API (списание баланса).</param>
     /// <param name="catalogClient">Клиент к Catalog.API (передача предмета).</param>
+    /// <param name="hub">Хаб для адресного пуша об изменении баланса.</param>
     /// <param name="logger">Логгер.</param>
     public AuctionCompletionService(
         ILobbyRepository repository,
         IIdentityServiceClient identityClient,
         ICatalogServiceClient catalogClient,
+        IHubContext<LobbyHub> hub,
         ILogger<AuctionCompletionService> logger)
     {
         _repository = repository;
         _identityClient = identityClient;
         _catalogClient = catalogClient;
+        _hub = hub;
         _logger = logger;
     }
 
@@ -73,10 +79,12 @@ public sealed class AuctionCompletionService
             var sellerId = await _catalogClient.AwardItemAsync(lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
 
             await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+            await _hub.Clients.User(lobby.WinnerId.Value.ToString()).SendAsync("BalanceChanged", cancellationToken);
 
             if (sellerId.HasValue)
             {
                 await _identityClient.CreditAsync(sellerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+                await _hub.Clients.User(sellerId.Value.ToString()).SendAsync("BalanceChanged", cancellationToken);
                 _logger.LogInformation("Продавец {SellerId} получил {Amount} за предмет {ItemId} в лобби {LobbyId}",
                     sellerId.Value, lobby.CurrentBid.Amount, lobby.ItemId, lobby.Id);
             }
