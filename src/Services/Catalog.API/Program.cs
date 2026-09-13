@@ -63,7 +63,8 @@ builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValida
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.GenerationBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(5);
+    // NOTE: 30с под холодный старт Generation.API (free-tier засыпает) — иначе сид витрины не успевает.
+    client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 });
 
@@ -136,7 +137,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
     var generatePublicItem = scope.ServiceProvider.GetRequiredService<GeneratePublicItemCommandHandler>();
-    await CatalogDbInitializer.SeedAsync(db, generatePublicItem, marketplaceSettings);
+    await CatalogDbInitializer.SeedAsync(db, generatePublicItem, marketplaceSettings, app.Logger);
 }
 
 if (app.Environment.IsDevelopment())

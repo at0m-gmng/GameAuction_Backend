@@ -1,6 +1,7 @@
 using GameBackend.Services.Catalog.API.Application.Commands;
 using GameBackend.Services.Catalog.API.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace GameBackend.Services.Catalog.API.Infrastructure.Persistence;
 
@@ -15,11 +16,13 @@ public static class CatalogDbInitializer
     /// <param name="context">Контекст базы данных.</param>
     /// <param name="generatePublicItem">Обработчик генерации одного публичного предмета.</param>
     /// <param name="marketplace">Параметры генерации витрины.</param>
+    /// <param name="logger">Логгер для best-effort генерации, которая не должна ронять запуск сервиса.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     public static async Task SeedAsync(
         CatalogDbContext context,
         GeneratePublicItemCommandHandler generatePublicItem,
         MarketplaceSettings marketplace,
+        ILogger logger,
         CancellationToken cancellationToken = default)
     {
         // NOTE: EnsureCreated вместо миграций — упрощение для демо-проекта.
@@ -93,6 +96,17 @@ public static class CatalogDbInitializer
         var deficit = Math.Max(0, marketplace.PublicCatalogSeedCount - listedPublicItems.Count);
 
         for (var i = 0; i < deficit; i++)
-            await generatePublicItem.Handle(new GeneratePublicItemCommand(), cancellationToken);
+        {
+            try
+            {
+                await generatePublicItem.Handle(new GeneratePublicItemCommand(), cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // NOTE: генерация best-effort — недоступный Generation.API не должен ронять старт каталога.
+                logger.LogWarning(ex, "Не удалось сгенерировать публичный предмет ({Done}/{Target})", i, deficit);
+                break;
+            }
+        }
     }
 }
