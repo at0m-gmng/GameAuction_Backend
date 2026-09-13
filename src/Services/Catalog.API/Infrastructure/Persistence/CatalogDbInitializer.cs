@@ -37,6 +37,17 @@ public static class CatalogDbInitializer
             await context.Database.ExecuteSqlRawAsync(
                 """ALTER TABLE "Items" ADD COLUMN IF NOT EXISTS "CreatedAt" timestamp with time zone NOT NULL DEFAULT '2000-01-01';""",
                 cancellationToken);
+            await context.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "Items" ADD COLUMN IF NOT EXISTS "IsListed" boolean NOT NULL DEFAULT false;""",
+                cancellationToken);
+            await context.Database.ExecuteSqlRawAsync(
+                """CREATE INDEX IF NOT EXISTS "IX_Items_IsListed" ON "Items" ("IsListed");""",
+                cancellationToken);
+
+            // NOTE: бэкфилл — публичные предметы, созданные до появления IsListed, иначе пропадают из витрины.
+            await context.Database.ExecuteSqlRawAsync(
+                """UPDATE "Items" SET "IsListed" = true WHERE "OwnerId" IS NULL AND NOT "IsListed";""",
+                cancellationToken);
         }
 
         var newestPublicItemCreatedAt = await context.Items

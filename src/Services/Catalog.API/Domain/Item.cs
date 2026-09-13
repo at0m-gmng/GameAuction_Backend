@@ -88,6 +88,8 @@ public sealed class Item : AggregateRoot
         StartingPrice = startingPrice;
         Stock = stock;
         OwnerId = ownerId;
+        // NOTE: публичные предметы видны в каталоге сразу; приватные — только после явного ListForSale.
+        IsListed = ownerId is null;
         CreatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new ItemCreated(Id, Name, StartingPrice));
