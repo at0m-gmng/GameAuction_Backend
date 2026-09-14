@@ -80,27 +80,30 @@ builder.Services.AddScoped<DebitBalanceCommandHandler>();
 builder.Services.AddScoped<CreditBalanceCommandHandler>();
 builder.Services.AddScoped<GetPlayerBalanceQueryHandler>();
 
-// NOTE: короткий таймаут — недоступность Generation/Catalog.API не должна задерживать вход.
-var internalApiTimeout = TimeSpan.FromSeconds(5);
-
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<CorrelationIdHandler>();
 
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.GenerationBaseUrl);
-    client.Timeout = internalApiTimeout;
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 })
-    .AddHttpMessageHandler<CorrelationIdHandler>();
+    .AddHttpMessageHandler<CorrelationIdHandler>()
+    // NOTE: retry будит уснувший Generation.API; длинный attempt-timeout под холодный старт free-tier.
+    .AddStandardResilienceHandler(o =>
+    {
+        o.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
+        o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(90);
+        o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
+    });
 
 builder.Services.AddHttpClient<ICatalogServiceClient, CatalogServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.CatalogBaseUrl);
-    client.Timeout = internalApiTimeout;
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 })
-    .AddHttpMessageHandler<CorrelationIdHandler>();
+    .AddHttpMessageHandler<CorrelationIdHandler>()
+    .AddStandardResilienceHandler();
 
 builder.Services.AddScoped<WelcomeGiftFulfiller>();
 

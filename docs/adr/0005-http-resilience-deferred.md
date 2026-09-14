@@ -1,6 +1,12 @@
 # ADR 0005 — HTTP-resilience (Polly) отложен до идемпотентности
 
-**Статус:** принято (отложено)
+**Статус:** включено (после [0006](0006-idempotency-cross-service-mutations.md))
+
+> **Обновление:** идемпотентность реализована ([0006](0006-idempotency-cross-service-mutations.md)), поэтому resilience включён — `AddStandardResilienceHandler` (`Microsoft.Extensions.Http.Resilience`) на межсервисных `HttpClient`. Retry включён на идемпотентных вызовах; на прямой покупке (`BuyItem` → `Debit`, ключа нет) retry выключен через `Retry.ShouldHandle = false` — остаются timeout + circuit breaker. Клиенты к Generation.API имеют длинный attempt-timeout под холодный старт.
+
+Ниже — исходное решение (сохранено для истории).
+
+**Статус (исходно):** принято (отложено)
 
 ## Контекст
 
