@@ -11,6 +11,8 @@ using GameBackend.SharedKernel.Application;
 using GameBackend.SharedKernel.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using FluentValidation;
+using GameBackend.Services.Identity.API.Infrastructure.Validation;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
@@ -30,7 +32,8 @@ builder.Host.UseSerilog((context, configuration) => configuration
     .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+builder.Services.AddControllers(options => options.Filters.Add<ValidationActionFilter>());
 
 builder.Services.AddCors(options =>
 {
