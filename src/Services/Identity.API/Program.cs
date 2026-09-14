@@ -4,6 +4,7 @@ using GameBackend.Services.Identity.API.Application.Queries;
 using GameBackend.Services.Identity.API.Application.Services;
 using GameBackend.Services.Identity.API.Infrastructure.Configuration;
 using GameBackend.Services.Identity.API.Infrastructure.ExternalServices;
+using GameBackend.Services.Identity.API.Infrastructure.Observability;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence;
 using GameBackend.Services.Identity.API.Infrastructure.Persistence.Repositories;
 using GameBackend.Services.Identity.API.Infrastructure.Security;
@@ -82,19 +83,24 @@ builder.Services.AddScoped<GetPlayerBalanceQueryHandler>();
 // NOTE: короткий таймаут — недоступность Generation/Catalog.API не должна задерживать вход.
 var internalApiTimeout = TimeSpan.FromSeconds(5);
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<CorrelationIdHandler>();
+
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.GenerationBaseUrl);
     client.Timeout = internalApiTimeout;
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
-});
+})
+    .AddHttpMessageHandler<CorrelationIdHandler>();
 
 builder.Services.AddHttpClient<ICatalogServiceClient, CatalogServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.CatalogBaseUrl);
     client.Timeout = internalApiTimeout;
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
-});
+})
+    .AddHttpMessageHandler<CorrelationIdHandler>();
 
 builder.Services.AddScoped<WelcomeGiftFulfiller>();
 
@@ -141,6 +147,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
 app.MapOpenApi();

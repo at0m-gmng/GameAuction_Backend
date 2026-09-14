@@ -3,6 +3,7 @@ using GameBackend.Services.Generation.API.Application.Interfaces;
 using GameBackend.Services.Generation.API.Domain;
 using GameBackend.Services.Generation.API.Infrastructure.Configuration;
 using GameBackend.Services.Generation.API.Infrastructure.Persistence;
+using GameBackend.Services.Generation.API.Infrastructure.Observability;
 using GameBackend.Services.Generation.API.Infrastructure.Persistence.Repositories;
 using GameBackend.SharedKernel.Security;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,7 @@ builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValida
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
 using (var scope = app.Services.CreateScope())

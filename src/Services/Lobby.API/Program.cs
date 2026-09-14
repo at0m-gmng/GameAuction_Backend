@@ -6,6 +6,7 @@ using GameBackend.Services.Lobby.API.Hubs;
 using GameBackend.Services.Lobby.API.Infrastructure.Configuration;
 using GameBackend.Services.Lobby.API.Infrastructure.Events;
 using GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
+using GameBackend.Services.Lobby.API.Infrastructure.Observability;
 using GameBackend.Services.Lobby.API.Infrastructure.Persistence;
 using GameBackend.Services.Lobby.API.Infrastructure.Persistence.Repositories;
 using GameBackend.Services.Lobby.API.Infrastructure.Validation;
@@ -86,19 +87,24 @@ builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValida
 // NOTE: короткий таймаут — расчёт по завершённому аукциону best-effort, не должен подвешивать запрос.
 var internalApiTimeout = TimeSpan.FromSeconds(5);
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<CorrelationIdHandler>();
+
 builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.IdentityBaseUrl);
     client.Timeout = internalApiTimeout;
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
-});
+})
+    .AddHttpMessageHandler<CorrelationIdHandler>();
 
 builder.Services.AddHttpClient<ICatalogServiceClient, CatalogServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.CatalogBaseUrl);
     client.Timeout = internalApiTimeout;
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
-});
+})
+    .AddHttpMessageHandler<CorrelationIdHandler>();
 
 // NOTE: Issuer/Audience/SecretKey должны совпадать с Identity.API — токены подписывает он.
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
@@ -156,6 +162,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
 app.MapOpenApi();
