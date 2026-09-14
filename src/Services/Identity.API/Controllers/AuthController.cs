@@ -4,6 +4,7 @@ using GameBackend.Services.Identity.API.Controllers.Dtos;
 using GameBackend.SharedKernel.Application;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 
@@ -39,6 +40,7 @@ public class AuthController : ControllerBase
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>JWT-токен.</returns>
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
@@ -62,6 +64,7 @@ public class AuthController : ControllerBase
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>JWT-токен.</returns>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
