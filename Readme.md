@@ -24,6 +24,10 @@
 
 У каждого сервиса есть health-check `/health` (проверка подключения к своей БД); у Identity/Catalog/Lobby — интерактивная API-документация `/scalar/v1` поверх OpenAPI.
 
+## Архитектура
+
+C4-диаграммы (context, container) и обоснование ключевых решений — в [`docs/architecture.md`](docs/architecture.md). Осознанные архитектурные выборы (EnsureCreated вместо миграций, `X-Internal-Key`, отсутствие outbox, пуш баланса по SignalR) зафиксированы как ADR в [`docs/adr/`](docs/adr/).
+
 ## Технологический стек
 
 - .NET 10, ASP.NET Core Web API
