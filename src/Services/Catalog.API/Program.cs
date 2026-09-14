@@ -81,27 +81,33 @@ builder.Services.AddTransient<CorrelationIdHandler>();
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.GenerationBaseUrl);
-    // NOTE: 30с под холодный старт Generation.API (free-tier засыпает) — иначе сид витрины не успевает.
-    client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 })
-    .AddHttpMessageHandler<CorrelationIdHandler>();
+    .AddHttpMessageHandler<CorrelationIdHandler>()
+    // NOTE: retry будит уснувший Generation.API; длинный attempt-timeout под холодный старт free-tier.
+    .AddStandardResilienceHandler(o =>
+    {
+        o.AttemptTimeout.Timeout = TimeSpan.FromSeconds(30);
+        o.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(90);
+        o.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(60);
+    });
 
 builder.Services.AddHttpClient<ILobbyServiceClient, LobbyServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.LobbyBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(5);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 })
-    .AddHttpMessageHandler<CorrelationIdHandler>();
+    .AddHttpMessageHandler<CorrelationIdHandler>()
+    .AddStandardResilienceHandler();
 
 builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.IdentityBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(5);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 })
-    .AddHttpMessageHandler<CorrelationIdHandler>();
+    .AddHttpMessageHandler<CorrelationIdHandler>()
+    // NOTE: покупка-debit не идемпотентна (без ключа) — retry запрещён, только timeout + circuit breaker.
+    .AddStandardResilienceHandler(o => o.Retry.MaxRetryAttempts = 0);
 
 var marketplaceSettings = builder.Configuration.GetSection(MarketplaceSettings.SectionName).Get<MarketplaceSettings>()
     ?? new MarketplaceSettings();
