@@ -3,6 +3,7 @@ using GameBackend.Services.Catalog.API.Application.Interfaces;
 using GameBackend.Services.Catalog.API.Application.Queries;
 using GameBackend.Services.Catalog.API.Infrastructure.Configuration;
 using GameBackend.Services.Catalog.API.Infrastructure.ExternalServices;
+using GameBackend.Services.Catalog.API.Infrastructure.Observability;
 using GameBackend.Services.Catalog.API.Infrastructure.Persistence;
 using GameBackend.Services.Catalog.API.Infrastructure.Persistence.Repositories;
 using GameBackend.Services.Catalog.API.Infrastructure.Validation;
@@ -74,6 +75,8 @@ if (string.IsNullOrWhiteSpace(internalApi.IdentityBaseUrl))
     throw new InvalidOperationException("InternalApi:IdentityBaseUrl не задан.");
 
 builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApi.Key));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<CorrelationIdHandler>();
 
 builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient>(client =>
 {
@@ -81,21 +84,24 @@ builder.Services.AddHttpClient<IGenerationServiceClient, GenerationServiceClient
     // NOTE: 30с под холодный старт Generation.API (free-tier засыпает) — иначе сид витрины не успевает.
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
-});
+})
+    .AddHttpMessageHandler<CorrelationIdHandler>();
 
 builder.Services.AddHttpClient<ILobbyServiceClient, LobbyServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.LobbyBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(5);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
-});
+})
+    .AddHttpMessageHandler<CorrelationIdHandler>();
 
 builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(client =>
 {
     client.BaseAddress = new Uri(internalApi.IdentityBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(5);
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
-});
+})
+    .AddHttpMessageHandler<CorrelationIdHandler>();
 
 var marketplaceSettings = builder.Configuration.GetSection(MarketplaceSettings.SectionName).Get<MarketplaceSettings>()
     ?? new MarketplaceSettings();
@@ -148,6 +154,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
 using (var scope = app.Services.CreateScope())
