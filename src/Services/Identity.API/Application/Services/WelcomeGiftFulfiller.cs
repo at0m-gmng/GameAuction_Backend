@@ -39,7 +39,7 @@ public sealed class WelcomeGiftFulfiller
         try
         {
             var generatedItem = await _generationClient.GenerateAsync(cancellationToken);
-            await _catalogClient.GrantItemAsync(player.Id, generatedItem, cancellationToken);
+            await _catalogClient.GrantItemAsync(player.Id, generatedItem, $"welcome-gift:{player.Id}", cancellationToken);
 
             player.MarkWelcomeGiftGranted();
             await _playerRepository.SaveAsync(player, cancellationToken);

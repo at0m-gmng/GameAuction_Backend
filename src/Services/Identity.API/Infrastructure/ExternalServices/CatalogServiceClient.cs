@@ -14,7 +14,7 @@ public sealed class CatalogServiceClient : ICatalogServiceClient
         _httpClient = httpClient;
     }
 
-    public async Task<Guid> GrantItemAsync(Guid playerId, GeneratedItemResponse item, CancellationToken cancellationToken = default)
+    public async Task<Guid> GrantItemAsync(Guid playerId, GeneratedItemResponse item, string idempotencyKey, CancellationToken cancellationToken = default)
     {
         var request = new GrantItemRequest(
             playerId,
@@ -25,7 +25,13 @@ public sealed class CatalogServiceClient : ICatalogServiceClient
             item.ImageUrl,
             item.StartingPrice);
 
-        var response = await _httpClient.PostAsJsonAsync("api/catalog/internal/grant-item", request, cancellationToken);
+        using var message = new HttpRequestMessage(HttpMethod.Post, "api/catalog/internal/grant-item")
+        {
+            Content = JsonContent.Create(request),
+        };
+        message.Headers.Add("Idempotency-Key", idempotencyKey);
+
+        var response = await _httpClient.SendAsync(message, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadFromJsonAsync<Guid>(cancellationToken);

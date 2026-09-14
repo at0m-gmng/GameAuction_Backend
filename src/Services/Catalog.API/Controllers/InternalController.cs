@@ -58,9 +58,14 @@ public sealed class InternalController : ControllerBase
         if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
             return Unauthorized();
 
+        var idempotencyKey = Request.Headers["Idempotency-Key"].ToString();
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+            return BadRequest(new { message = "Заголовок Idempotency-Key обязателен" });
+
         try
         {
             var command = new GrantItemCommand(
+                idempotencyKey,
                 request.PlayerId,
                 request.Name,
                 request.Description,
@@ -91,9 +96,13 @@ public sealed class InternalController : ControllerBase
         if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
             return Unauthorized();
 
+        var idempotencyKey = Request.Headers["Idempotency-Key"].ToString();
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+            return BadRequest(new { message = "Заголовок Idempotency-Key обязателен" });
+
         try
         {
-            var sellerId = await _awardItem.Handle(new AwardItemCommand(request.PlayerId, itemId, request.Quantity, request.Price), ct);
+            var sellerId = await _awardItem.Handle(new AwardItemCommand(idempotencyKey, request.PlayerId, itemId, request.Quantity, request.Price), ct);
             return Ok(sellerId);
         }
         catch (InvalidOperationException ex)

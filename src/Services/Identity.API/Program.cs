@@ -177,6 +177,15 @@ using (var scope = app.Services.CreateScope())
 
         // NOTE: "Inventory" — осиротевшая колонка от удалённого неиспользуемого Player._inventory.
         db.Database.ExecuteSqlRaw("""ALTER TABLE "Players" DROP COLUMN IF EXISTS "Inventory";""");
+
+        // NOTE: журнал идемпотентности — EnsureCreated не создаёт его в старой БД, патч идемпотентен.
+        db.Database.ExecuteSqlRaw(
+            """
+            CREATE TABLE IF NOT EXISTS "ProcessedOperations" (
+                "Key" text NOT NULL PRIMARY KEY,
+                "ProcessedAt" timestamp with time zone NOT NULL
+            );
+            """);
     }
 }
 

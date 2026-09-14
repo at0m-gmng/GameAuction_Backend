@@ -6,6 +6,7 @@ namespace GameBackend.Services.Catalog.API.Application.Commands;
 /// <summary>
 /// Команда выдачи приватного предмета игроку (например, приветственного подарка).
 /// </summary>
+/// <param name="IdempotencyKey">Ключ идемпотентности — повтор с тем же ключом не выдаёт второй предмет.</param>
 /// <param name="PlayerId">Идентификатор игрока-получателя.</param>
 /// <param name="Name">Название предмета.</param>
 /// <param name="Description">Описание предмета.</param>
@@ -14,6 +15,7 @@ namespace GameBackend.Services.Catalog.API.Application.Commands;
 /// <param name="ImageUrl">Ссылка на изображение.</param>
 /// <param name="StartingPrice">Базовая цена предмета.</param>
 public sealed record GrantItemCommand(
+    string IdempotencyKey,
     Guid PlayerId,
     string Name,
     string? Description,

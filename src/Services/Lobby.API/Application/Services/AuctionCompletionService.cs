@@ -76,14 +76,15 @@ public sealed class AuctionCompletionService
 
         try
         {
-            var sellerId = await _catalogClient.AwardItemAsync(lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+            var sellerId = await _catalogClient.AwardItemAsync(
+                lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount, $"award:{lobby.Id}", cancellationToken);
 
-            await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+            await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, $"debit:{lobby.Id}", cancellationToken);
             await _hub.Clients.User(lobby.WinnerId.Value.ToString()).SendAsync("BalanceChanged", cancellationToken);
 
             if (sellerId.HasValue)
             {
-                await _identityClient.CreditAsync(sellerId.Value, lobby.CurrentBid.Amount, cancellationToken);
+                await _identityClient.CreditAsync(sellerId.Value, lobby.CurrentBid.Amount, $"credit:{lobby.Id}", cancellationToken);
                 await _hub.Clients.User(sellerId.Value.ToString()).SendAsync("BalanceChanged", cancellationToken);
                 _logger.LogInformation("Продавец {SellerId} получил {Amount} за предмет {ItemId} в лобби {LobbyId}",
                     sellerId.Value, lobby.CurrentBid.Amount, lobby.ItemId, lobby.Id);

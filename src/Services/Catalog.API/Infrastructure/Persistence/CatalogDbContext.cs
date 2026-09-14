@@ -28,6 +28,11 @@ public class CatalogDbContext : DbContext
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
 
     /// <summary>
+    /// Журнал обработанных операций для идемпотентности.
+    /// </summary>
+    public DbSet<ProcessedOperation> ProcessedOperations => Set<ProcessedOperation>();
+
+    /// <summary>
     /// Применяет все конфигурации маппинга из этой сборки.
     /// </summary>
     /// <param name="modelBuilder">Построитель модели.</param>

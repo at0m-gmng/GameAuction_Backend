@@ -15,12 +15,15 @@ public sealed class CatalogServiceClient : ICatalogServiceClient
         _httpClient = httpClient;
     }
 
-    public async Task<Guid?> AwardItemAsync(Guid itemId, Guid winnerId, decimal price, CancellationToken cancellationToken = default)
+    public async Task<Guid?> AwardItemAsync(Guid itemId, Guid winnerId, decimal price, string idempotencyKey, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsJsonAsync(
-            $"api/catalog/internal/items/{itemId}/award",
-            new { PlayerId = winnerId, Quantity = 1, Price = price },
-            cancellationToken);
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"api/catalog/internal/items/{itemId}/award")
+        {
+            Content = JsonContent.Create(new { PlayerId = winnerId, Quantity = 1, Price = price }),
+        };
+        message.Headers.Add("Idempotency-Key", idempotencyKey);
+
+        var response = await _httpClient.SendAsync(message, cancellationToken);
 
         response.EnsureSuccessStatusCode();
 

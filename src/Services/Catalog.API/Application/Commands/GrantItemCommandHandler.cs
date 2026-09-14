@@ -40,6 +40,13 @@ public sealed class GrantItemCommandHandler : ICommandHandler<GrantItemCommand, 
         {
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
+            // NOTE: ключ уже обработан — повторная выдача пропускается (идемпотентность).
+            if (await _context.ProcessedOperations.AnyAsync(x => x.Key == command.IdempotencyKey, cancellationToken))
+            {
+                await transaction.CommitAsync(cancellationToken);
+                return Guid.Empty;
+            }
+
             var item = Item.CreateOwned(
                 command.PlayerId,
                 command.Name,
@@ -54,9 +61,19 @@ public sealed class GrantItemCommandHandler : ICommandHandler<GrantItemCommand, 
             var inventoryItem = InventoryItem.Create(command.PlayerId, item.Id);
             await _inventoryRepository.SaveAsync(inventoryItem, cancellationToken);
 
-            await transaction.CommitAsync(cancellationToken);
+            _context.ProcessedOperations.Add(new ProcessedOperation(command.IdempotencyKey));
 
-            return item.Id;
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return item.Id;
+            }
+            catch (DbUpdateException)
+            {
+                // NOTE: гонка одновременных выдач — ключ уже вставлен другим запросом; транзакция откатится.
+                return Guid.Empty;
+            }
         });
     }
 }

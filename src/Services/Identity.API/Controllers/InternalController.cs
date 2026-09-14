@@ -54,9 +54,12 @@ public sealed class InternalController : ControllerBase
         if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
             return Unauthorized();
 
+        // NOTE: ключ необязателен — прямая покупка его не шлёт; при наличии включает дедуп.
+        var idempotencyKey = Request.Headers["Idempotency-Key"].ToString();
+
         try
         {
-            await _debitBalance.Handle(new DebitBalanceCommand(playerId, request.Amount), ct);
+            await _debitBalance.Handle(new DebitBalanceCommand(idempotencyKey, playerId, request.Amount), ct);
             return NoContent();
         }
         catch (InvalidOperationException ex)
@@ -77,9 +80,12 @@ public sealed class InternalController : ControllerBase
         if (!_internalCallerValidator.IsValid(Request.Headers["X-Internal-Key"]))
             return Unauthorized();
 
+        // NOTE: ключ необязателен — при наличии включает дедуп (расчёт аукциона его шлёт).
+        var idempotencyKey = Request.Headers["Idempotency-Key"].ToString();
+
         try
         {
-            await _creditBalance.Handle(new CreditBalanceCommand(playerId, request.Amount), ct);
+            await _creditBalance.Handle(new CreditBalanceCommand(idempotencyKey, playerId, request.Amount), ct);
             return NoContent();
         }
         catch (InvalidOperationException ex)

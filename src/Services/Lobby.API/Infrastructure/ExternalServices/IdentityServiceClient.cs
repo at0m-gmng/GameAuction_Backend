@@ -14,24 +14,27 @@ public sealed class IdentityServiceClient : IIdentityServiceClient
         _httpClient = httpClient;
     }
 
-    public async Task DebitAsync(Guid playerId, decimal amount, CancellationToken cancellationToken = default)
+    public async Task DebitAsync(Guid playerId, decimal amount, string idempotencyKey, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsJsonAsync(
-            $"api/auth/internal/players/{playerId}/debit",
-            new { Amount = amount },
-            cancellationToken);
-
+        var response = await SendWithKeyAsync($"api/auth/internal/players/{playerId}/debit", amount, idempotencyKey, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task CreditAsync(Guid playerId, decimal amount, CancellationToken cancellationToken = default)
+    public async Task CreditAsync(Guid playerId, decimal amount, string idempotencyKey, CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.PostAsJsonAsync(
-            $"api/auth/internal/players/{playerId}/credit",
-            new { Amount = amount },
-            cancellationToken);
-
+        var response = await SendWithKeyAsync($"api/auth/internal/players/{playerId}/credit", amount, idempotencyKey, cancellationToken);
         response.EnsureSuccessStatusCode();
+    }
+
+    private async Task<HttpResponseMessage> SendWithKeyAsync(string path, decimal amount, string idempotencyKey, CancellationToken cancellationToken)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(new { Amount = amount }),
+        };
+        message.Headers.Add("Idempotency-Key", idempotencyKey);
+
+        return await _httpClient.SendAsync(message, cancellationToken);
     }
 
     public async Task<decimal> GetBalanceAsync(Guid playerId, CancellationToken cancellationToken = default)

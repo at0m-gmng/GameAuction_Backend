@@ -23,6 +23,11 @@ public class IdentityDbContext : DbContext
     public DbSet<Player> Players => Set<Player>();
 
     /// <summary>
+    /// Журнал обработанных операций для идемпотентности.
+    /// </summary>
+    public DbSet<ProcessedOperation> ProcessedOperations => Set<ProcessedOperation>();
+
+    /// <summary>
     /// Применяет конфигурации маппинга из сборки.
     /// </summary>
     /// <param name="modelBuilder">Построитель модели.</param>

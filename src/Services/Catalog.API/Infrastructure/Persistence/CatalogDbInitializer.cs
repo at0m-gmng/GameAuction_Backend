@@ -77,6 +77,17 @@ public static class CatalogDbInitializer
                 END $$;
                 """,
                 cancellationToken);
+
+            // NOTE: журнал идемпотентности — EnsureCreated не создаёт его в старой БД, патч идемпотентен.
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE IF NOT EXISTS "ProcessedOperations" (
+                    "Key" text NOT NULL PRIMARY KEY,
+                    "Result" text NULL,
+                    "ProcessedAt" timestamp with time zone NOT NULL
+                );
+                """,
+                cancellationToken);
         }
 
         // NOTE: витрина держит ровно PublicCatalogSeedCount публичных лотов — лишнее снимаем, нехватку добираем.
