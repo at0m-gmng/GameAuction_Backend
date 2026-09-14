@@ -33,6 +33,8 @@ builder.Services.AddDbContext<CatalogDbContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(5),
             errorCodesToAdd: null)));
 
+builder.Services.AddHealthChecks().AddDbContextCheck<CatalogDbContext>();
+
 builder.Services.AddScoped<IItemRepository, ItemRepository>();
 builder.Services.AddScoped<CreateItemCommandHandler>();
 builder.Services.AddScoped<GetItemsQueryHandler>();
@@ -150,5 +152,6 @@ app.UseCors(FrontendCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

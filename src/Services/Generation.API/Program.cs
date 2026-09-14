@@ -15,6 +15,8 @@ builder.Services.AddDbContext<GenerationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("GenerationDb"),
         npgsql => npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null)));
 
+builder.Services.AddHealthChecks().AddDbContextCheck<GenerationDbContext>();
+
 builder.Services.AddSingleton<IItemGenerator, ItemGenerator>();
 builder.Services.AddScoped<IGenerationPoolRepository, GenerationPoolRepository>();
 builder.Services.AddScoped<GenerateItemCommandHandler>();
@@ -36,5 +38,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

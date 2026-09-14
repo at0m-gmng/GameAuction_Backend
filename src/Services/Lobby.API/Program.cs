@@ -42,6 +42,8 @@ builder.Services.AddDbContext<LobbyDbContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(5),
             errorCodesToAdd: null)));
 
+builder.Services.AddHealthChecks().AddDbContextCheck<LobbyDbContext>();
+
 builder.Services.AddScoped<ILobbyRepository, LobbyRepository>();
 builder.Services.AddScoped<IDomainEventDispatcher, SignalRDomainEventDispatcher>();
 
@@ -152,6 +154,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<LobbyHub>("/hubs/lobby");
+app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {

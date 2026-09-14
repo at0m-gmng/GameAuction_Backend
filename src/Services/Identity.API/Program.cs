@@ -38,6 +38,8 @@ builder.Services.AddDbContext<IdentityDbContext>(options =>
             maxRetryDelay: TimeSpan.FromSeconds(5),
             errorCodesToAdd: null)));
 
+builder.Services.AddHealthChecks().AddDbContextCheck<IdentityDbContext>();
+
 builder.Services.AddSingleton<PasswordHasher>();
 
 // NOTE: не fail-fast — это игровой параметр, а не секрет; отсутствие секции даёт StartingBalance = 0.
@@ -136,6 +138,7 @@ app.UseCors(FrontendCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {
