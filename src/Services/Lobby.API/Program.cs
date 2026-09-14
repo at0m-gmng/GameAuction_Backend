@@ -8,8 +8,10 @@ using GameBackend.Services.Lobby.API.Infrastructure.Events;
 using GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
 using GameBackend.Services.Lobby.API.Infrastructure.Persistence;
 using GameBackend.Services.Lobby.API.Infrastructure.Persistence.Repositories;
+using GameBackend.Services.Lobby.API.Infrastructure.Validation;
 using GameBackend.SharedKernel.Application;
 using GameBackend.SharedKernel.Security;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +33,8 @@ builder.Host.UseSerilog((context, configuration) => configuration
     .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssemblyContaining<PlaceBidRequestValidator>();
+builder.Services.AddControllers(options => options.Filters.Add<ValidationActionFilter>());
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
 

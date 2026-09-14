@@ -5,7 +5,9 @@ using GameBackend.Services.Catalog.API.Infrastructure.Configuration;
 using GameBackend.Services.Catalog.API.Infrastructure.ExternalServices;
 using GameBackend.Services.Catalog.API.Infrastructure.Persistence;
 using GameBackend.Services.Catalog.API.Infrastructure.Persistence.Repositories;
+using GameBackend.Services.Catalog.API.Infrastructure.Validation;
 using GameBackend.SharedKernel.Security;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -25,7 +27,8 @@ builder.Host.UseSerilog((context, configuration) => configuration
     .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssemblyContaining<BuyItemRequestValidator>();
+builder.Services.AddControllers(options => options.Filters.Add<ValidationActionFilter>());
 
 builder.Services.AddCors(options =>
 {
