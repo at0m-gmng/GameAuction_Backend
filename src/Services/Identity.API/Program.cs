@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using FluentValidation;
 using GameBackend.Services.Identity.API.Infrastructure.Validation;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -142,10 +143,8 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.UseHttpsRedirection();
 app.UseCors(FrontendCorsPolicy);

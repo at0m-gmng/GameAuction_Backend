@@ -11,6 +11,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -156,10 +157,8 @@ using (var scope = app.Services.CreateScope())
     await CatalogDbInitializer.SeedAsync(db, generatePublicItem, marketplaceSettings, app.Logger);
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.UseHttpsRedirection();
 app.UseCors(FrontendCorsPolicy);
