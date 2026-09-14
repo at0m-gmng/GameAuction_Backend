@@ -106,8 +106,8 @@ builder.Services.AddHttpClient<IIdentityServiceClient, IdentityServiceClient>(cl
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalApi.Key);
 })
     .AddHttpMessageHandler<CorrelationIdHandler>()
-    // NOTE: покупка-debit не идемпотентна (без ключа) — retry запрещён, только timeout + circuit breaker.
-    .AddStandardResilienceHandler(o => o.Retry.MaxRetryAttempts = 0);
+    // NOTE: покупка-debit не идемпотентна — ретрай выключаем через ShouldHandle=false, оставляя timeout + circuit breaker.
+    .AddStandardResilienceHandler(o => o.Retry.ShouldHandle = _ => ValueTask.FromResult(false));
 
 var marketplaceSettings = builder.Configuration.GetSection(MarketplaceSettings.SectionName).Get<MarketplaceSettings>()
     ?? new MarketplaceSettings();
