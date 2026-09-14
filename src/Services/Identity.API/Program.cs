@@ -12,6 +12,9 @@ using GameBackend.SharedKernel.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 using System.Text;
 
 const string FrontendCorsPolicy = "Frontend";
@@ -19,6 +22,12 @@ const string FrontendCorsPolicy = "Frontend";
 const int HmacSha256MinKeyBytes = 32;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, configuration) => configuration
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
@@ -127,6 +136,8 @@ builder.Services
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {

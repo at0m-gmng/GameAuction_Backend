@@ -6,8 +6,17 @@ using GameBackend.Services.Generation.API.Infrastructure.Persistence;
 using GameBackend.Services.Generation.API.Infrastructure.Persistence.Repositories;
 using GameBackend.SharedKernel.Security;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, configuration) => configuration
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
 builder.Services.AddControllers();
 
@@ -30,6 +39,8 @@ if (string.IsNullOrWhiteSpace(internalApi.Key))
 builder.Services.AddSingleton<IInternalCallerValidator>(new InternalCallerValidator(internalApi.Key));
 
 var app = builder.Build();
+
+app.UseSerilogRequestLogging();
 
 using (var scope = app.Services.CreateScope())
 {
