@@ -28,6 +28,6 @@ public sealed class JwtSettings
     /// <summary>
     /// Время жизни токена в минутах.
     /// </summary>
-    // TODO: 60-минутная сессия в localStorage — нужен короткий access + refresh в httpOnly-cookie.
+    // NOTE: 60-мин сессия в localStorage — осознанный выбор демо; прод-путь (httpOnly refresh) в ADR 0007.
     public int ExpiryMinutes { get; set; } = 60;
 }

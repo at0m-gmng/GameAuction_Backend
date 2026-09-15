@@ -63,3 +63,4 @@ C4Container
 - [0004](adr/0004-signalr-balance-push.md) — пуш баланса по SignalR вместо опроса
 - [0005](adr/0005-http-resilience-deferred.md) — HTTP-resilience (Polly) отложен до идемпотентности
 - [0006](adr/0006-idempotency-cross-service-mutations.md) — идемпотентность межсервисных мутирующих операций
+- [0007](adr/0007-scale-and-security-boundaries.md) — границы масштаба: что сознательно вне объёма
