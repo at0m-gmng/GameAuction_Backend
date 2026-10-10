@@ -32,6 +32,14 @@ public interface ILobbyRepository
     Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Получает идентификаторы аукционов в статусе Bidding, время которых истекло к указанному моменту.
+    /// </summary>
+    /// <param name="now">Текущий момент (UTC).</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Идентификаторы просроченных аукционов.</returns>
+    Task<IReadOnlyCollection<Guid>> GetExpiredBiddingLobbyIdsAsync(DateTime now, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Получает строки списка для последних завершённых лобби — проекцией в БД, без загрузки ставок.
     /// </summary>
     /// <param name="limit">Максимальное количество.</param>

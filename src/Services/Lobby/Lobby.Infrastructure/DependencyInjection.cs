@@ -1,5 +1,6 @@
 using GameBackend.ServiceDefaults.Extensions;
 using GameBackend.Services.Lobby.Application.Interfaces;
+using GameBackend.Services.Lobby.Infrastructure.Background;
 using GameBackend.Services.Lobby.Infrastructure.Configuration;
 using GameBackend.Services.Lobby.Infrastructure.ExternalServices;
 using GameBackend.Services.Lobby.Infrastructure.Outbox;
@@ -19,7 +20,7 @@ public static class DependencyInjection
     private const string ConnectionName = "LobbyDb";
 
     /// <summary>
-    /// Регистрирует БД, репозиторий, outbox расчётов с фоновым обработчиком и клиенты Identity/Catalog.
+    /// Регистрирует БД, репозиторий, outbox расчётов, фоновые обработчики (расчёты, просроченные аукционы) и клиенты Identity/Catalog.
     /// </summary>
     /// <param name="services">Коллекция сервисов.</param>
     /// <param name="configuration">Конфигурация приложения.</param>
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<ISettlementOutbox, SettlementOutbox>();
         services.AddScoped<SettlementOutboxDispatcher>();
         services.AddHostedService<SettlementOutboxProcessor>();
+        services.AddHostedService<AuctionExpiryProcessor>();
 
         services.AddInternalApi<InternalApiSettings>(InternalApiSettings.SectionName);
         services.AddInternalServiceClient<IIdentityServiceClient, IdentityServiceClient, InternalApiSettings>(settings => settings.IdentityBaseUrl)

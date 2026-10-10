@@ -2,6 +2,8 @@ using GameBackend.Services.Lobby.Application.Interfaces;
 using GameBackend.Services.Lobby.Application.Lobbies;
 using GameBackend.Services.Lobby.Application.Settlement;
 using GameBackend.Services.Lobby.Domain;
+using GameBackend.SharedKernel.Application;
+using GameBackend.SharedKernel.Domain;
 
 namespace Lobby.API.Tests;
 
@@ -57,6 +59,7 @@ internal sealed class FakeLobbyRepository : ILobbyRepository
     public Task<LobbyAggregate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<LobbyAggregate?> GetOpenLobbyByItemIdAsync(Guid itemId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<IReadOnlyCollection<Guid>> GetExpiredBiddingLobbyIdsAsync(DateTime now, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<IReadOnlyCollection<LobbyListDto>> GetRecentCompletedSummariesAsync(int limit, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<IReadOnlyCollection<LobbyAggregate>> GetPlayerHistoryAsync(Guid playerId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<(int Wins, int Losses)> GetPlayerAuctionStatsAsync(Guid playerId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -86,4 +89,9 @@ internal sealed class FixedTimeProvider : TimeProvider
     public DateTimeOffset Now { get; set; } = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
     public override DateTimeOffset GetUtcNow() => Now;
+}
+
+internal sealed class NoopDomainEventDispatcher : IDomainEventDispatcher
+{
+    public Task DispatchAsync(IEnumerable<IDomainEvent> events, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

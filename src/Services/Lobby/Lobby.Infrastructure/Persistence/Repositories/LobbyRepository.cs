@@ -70,6 +70,19 @@ public class LobbyRepository : ILobbyRepository
     }
 
     /// <summary>
+    /// Получает идентификаторы аукционов в статусе Bidding, время которых истекло к указанному моменту.
+    /// </summary>
+    /// <param name="now">Текущий момент (UTC).</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Идентификаторы просроченных аукционов.</returns>
+    public async Task<IReadOnlyCollection<Guid>> GetExpiredBiddingLobbyIdsAsync(DateTime now, CancellationToken cancellationToken = default) =>
+        await _context.Lobbies
+            .AsNoTracking()
+            .Where(x => x.Status == LobbyStatus.Bidding && x.EndsAt <= now)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+    /// <summary>
     /// Получает строки списка для последних завершённых лобби — проекцией в БД, без загрузки ставок.
     /// Поля считаются так же, как в агрегате: текущая ставка — максимальная, иначе стартовая цена.
     /// </summary>
