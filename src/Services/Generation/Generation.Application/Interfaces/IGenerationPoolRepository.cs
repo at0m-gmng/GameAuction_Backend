@@ -11,11 +11,13 @@ public interface IGenerationPoolRepository
     /// Возвращает все архетипы предметов.
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>
+    /// <remarks>Только для чтения: сущности не отслеживаются EF, сохранять их через репозиторий нельзя.</remarks>
     Task<IReadOnlyCollection<ItemArchetype>> GetArchetypesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Возвращает все уровни редкости.
     /// </summary>
     /// <param name="cancellationToken">Токен отмены.</param>
+    /// <remarks>Только для чтения: сущности не отслеживаются EF, сохранять их через репозиторий нельзя.</remarks>
     Task<IReadOnlyCollection<RarityTier>> GetRarityTiersAsync(CancellationToken cancellationToken = default);
 }

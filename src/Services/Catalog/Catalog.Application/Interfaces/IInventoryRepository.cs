@@ -22,6 +22,7 @@ public interface IInventoryRepository
     /// <param name="playerId">Идентификатор игрока.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция позиций инвентаря.</returns>
+    /// <remarks>Только для чтения: сущности не отслеживаются EF, сохранять их через репозиторий нельзя.</remarks>
     Task<IReadOnlyCollection<InventoryItem>> GetByPlayerAsync(Guid playerId, CancellationToken cancellationToken = default);
 
     /// <summary>

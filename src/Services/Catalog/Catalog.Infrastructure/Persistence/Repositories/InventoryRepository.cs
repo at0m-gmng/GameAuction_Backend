@@ -31,6 +31,7 @@ public class InventoryRepository : IInventoryRepository
     public async Task<IReadOnlyCollection<InventoryItem>> GetByPlayerAsync(Guid playerId, CancellationToken cancellationToken = default)
     {
         return await _context.InventoryItems
+            .AsNoTracking()
             .Where(x => x.PlayerId == playerId)
             .ToListAsync(cancellationToken);
     }

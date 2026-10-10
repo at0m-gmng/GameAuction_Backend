@@ -1,4 +1,5 @@
-﻿using GameBackend.Services.Lobby.Domain;
+﻿using GameBackend.Services.Lobby.Application.Lobbies;
+using GameBackend.Services.Lobby.Domain;
 
 namespace GameBackend.Services.Lobby.Application.Interfaces;
 
@@ -31,12 +32,12 @@ public interface ILobbyRepository
     Task<IReadOnlyCollection<LobbyAggregate>> GetOpenLobbiesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Получает последние завершённые лобби (со ставками) для показа в общем списке аукционов.
+    /// Получает строки списка для последних завершённых лобби — проекцией в БД, без загрузки ставок.
     /// </summary>
     /// <param name="limit">Максимальное количество.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
-    /// <returns>Коллекция завершённых лобби, новые первыми.</returns>
-    Task<IReadOnlyCollection<LobbyAggregate>> GetRecentCompletedLobbiesAsync(int limit, CancellationToken cancellationToken = default);
+    /// <returns>Строки списка завершённых лобби, новые первыми.</returns>
+    Task<IReadOnlyCollection<LobbyListDto>> GetRecentCompletedSummariesAsync(int limit, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Получает завершённые аукционы игрока, где он делал ставку (со ставками) — история для профиля.
@@ -44,6 +45,7 @@ public interface ILobbyRepository
     /// <param name="playerId">Идентификатор игрока.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция завершённых аукционов игрока, новые первыми.</returns>
+    /// <remarks>Только для чтения: сущности не отслеживаются EF, сохранять их через репозиторий нельзя.</remarks>
     Task<IReadOnlyCollection<LobbyAggregate>> GetPlayerHistoryAsync(Guid playerId, CancellationToken cancellationToken = default);
 
     /// <summary>

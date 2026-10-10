@@ -39,7 +39,7 @@ public class ItemRepository : IItemRepository
     public async Task<IReadOnlyCollection<Item>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
     {
         var idList = ids.ToList();
-        return await _context.Items.Where(x => idList.Contains(x.Id)).ToListAsync(cancellationToken);
+        return await _context.Items.AsNoTracking().Where(x => idList.Contains(x.Id)).ToListAsync(cancellationToken);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public class ItemRepository : IItemRepository
         CancellationToken cancellationToken = default)
     {
         // NOTE: каталог — это витрина выставленных лотов; невыставленные (в т.ч. инвентарь игроков) сюда не попадают.
-        var query = _context.Items.Where(x => x.IsListed);
+        var query = _context.Items.AsNoTracking().Where(x => x.IsListed);
 
         if (category.HasValue)
             query = query.Where(x => x.Category == category.Value);
@@ -83,6 +83,7 @@ public class ItemRepository : IItemRepository
     public async Task<IReadOnlyCollection<Item>> GetListedByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
     {
         return await _context.Items
+            .AsNoTracking()
             .Where(x => x.IsListed && x.OwnerId == ownerId)
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
