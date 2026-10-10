@@ -6,7 +6,7 @@ using GameBackend.Services.Catalog.Infrastructure.Persistence;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceLogging();
+builder.UsePlatformPort().AddServiceLogging();
 
 builder.Services
     .AddApiDocumentation()

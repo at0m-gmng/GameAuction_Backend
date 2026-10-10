@@ -5,7 +5,7 @@ using GameBackend.Services.Generation.Infrastructure.Persistence;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceLogging();
+builder.UsePlatformPort().AddServiceLogging();
 
 builder.Services.AddControllers();
 builder.Services

@@ -1,6 +1,7 @@
 using GameBackend.ServiceDefaults.Observability;
 using GameBackend.ServiceDefaults.Validation;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Scalar.AspNetCore;
 using Serilog;
@@ -30,6 +31,22 @@ public static class HostingExtensions
     public const string HealthPath = "/health";
 
     private const string AspNetCoreLogSource = "Microsoft.AspNetCore";
+    private const string PlatformPortVariable = "PORT";
+
+    /// <summary>
+    /// Слушает порт из переменной PORT, если её задала платформа (Render); иначе — стандартная настройка ASP.NET Core.
+    /// </summary>
+    /// <param name="builder">Построитель приложения.</param>
+    /// <returns>Тот же построитель.</returns>
+    public static WebApplicationBuilder UsePlatformPort(this WebApplicationBuilder builder)
+    {
+        if (int.TryParse(Environment.GetEnvironmentVariable(PlatformPortVariable), out int port))
+        {
+            builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(port));
+        }
+
+        return builder;
+    }
 
     /// <summary>
     /// Подключает Serilog со структурированным JSON-выводом в консоль.

@@ -50,9 +50,17 @@ C4-диаграммы (context, container) и обоснование ключе�
 
 ## Деплой
 
-Все четыре Web Service развёрнуты на [Render](https://render.com) из общего [`Dockerfile`](Dockerfile) (`SERVICE_PATH` выбирает нужную DLL внутри образа). БД — PostgreSQL на [Neon](https://neon.tech), у каждого сервиса своя строка подключения.
+Все четыре Web Service развёрнуты на [Render](https://render.com), у каждого свой Dockerfile: `src/Services/<Service>/Dockerfile` (стандартная многоэтапная сборка: restore → publish → `ENTRYPOINT ["dotnet", "<Service>.API.dll"]`). Контекст сборки — корень репозитория. Порт берётся из переменной `PORT`, которую задаёт Render. БД — PostgreSQL на [Neon](https://neon.tech), у каждого сервиса своя строка подключения.
 
-Все четыре сервиса деплоятся автоматически при пуше в `main` (git-интеграцией Render). GitHub Actions используется только для CI (сборка и тесты) — см. [`.github/workflows/build.yml`](.github/workflows/build.yml).
+Настройки сервиса в Render: **Dockerfile Path** — `./src/Services/<Service>/Dockerfile`, **Docker Build Context Directory** — `.`.
+
+Локальная сборка образа:
+
+```bash
+docker build -f src/Services/Lobby/Dockerfile -t gameauction-lobby .
+```
+
+Все четыре сервиса деплоятся автоматически при пуше в `main` (git-интеграцией Render). GitHub Actions используется только для CI (сборка, тесты и сборка Docker-образов) — см. [`.github/workflows/build.yml`](.github/workflows/build.yml).
 
 ## Локальный запуск
 

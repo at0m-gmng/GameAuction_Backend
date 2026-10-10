@@ -26,3 +26,15 @@ jobs:
 
       - name: Test
         run: dotnet test --no-build --configuration Release
+
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [ Identity, Catalog, Generation, Lobby ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -f src/Services/${{ matrix.service }}/Dockerfile .
