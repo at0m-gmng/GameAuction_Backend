@@ -1,4 +1,4 @@
-using GameBackend.Services.Catalog.API.Domain;
+using GameBackend.Services.Catalog.Domain;
 using GameBackend.SharedKernel.Domain;
 
 namespace Catalog.API.Tests;

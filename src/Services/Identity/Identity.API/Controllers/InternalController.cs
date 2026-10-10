@@ -1,0 +1,118 @@
+using GameBackend.Services.Identity.Application.Commands;
+using GameBackend.Services.Identity.Application.Queries;
+using GameBackend.ServiceDefaults.Security;
+using Microsoft.AspNetCore.Mvc;
+
+namespace GameBackend.Services.Identity.API.Controllers;
+
+/// <summary>Контракт запроса на списание средств с баланса игрока.</summary>
+public sealed record DebitBalanceRequest(decimal Amount);
+
+/// <summary>Контракт запроса на пополнение баланса игрока.</summary>
+public sealed record CreditBalanceRequest(decimal Amount);
+
+/// <summary>
+/// Внутренние эндпоинты Identity.API. Принимают только сервисы с общим секретом.
+/// </summary>
+[ApiController]
+[Route("api/auth/internal")]
+public sealed class InternalController : ControllerBase
+{
+    private readonly DebitBalanceCommandHandler _debitBalance;
+    private readonly CreditBalanceCommandHandler _creditBalance;
+    private readonly GetPlayerBalanceQueryHandler _getBalance;
+    private readonly IInternalCallerValidator _internalCallerValidator;
+
+    /// <summary>
+    /// Инициализирует контроллер хендлерами и валидатором внутренних вызовов.
+    /// </summary>
+    /// <param name="debitBalance">Хендлер списания баланса.</param>
+    /// <param name="creditBalance">Хендлер пополнения баланса.</param>
+    /// <param name="getBalance">Хендлер запроса баланса.</param>
+    /// <param name="internalCallerValidator">Проверка X-Internal-Key.</param>
+    public InternalController(
+        DebitBalanceCommandHandler debitBalance,
+        CreditBalanceCommandHandler creditBalance,
+        GetPlayerBalanceQueryHandler getBalance,
+        IInternalCallerValidator internalCallerValidator)
+    {
+        _debitBalance = debitBalance;
+        _creditBalance = creditBalance;
+        _getBalance = getBalance;
+        _internalCallerValidator = internalCallerValidator;
+    }
+
+    /// <summary>
+    /// Списывает средства с баланса игрока (например, победа в аукционе).
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="request">Сумма списания.</param>
+    /// <param name="ct">Токен отмены.</param>
+    [HttpPost("players/{playerId:guid}/debit")]
+    public async Task<IActionResult> DebitBalance(Guid playerId, [FromBody] DebitBalanceRequest request, CancellationToken ct = default)
+    {
+        if (!_internalCallerValidator.IsValid(Request.Headers[InternalApiHeaders.InternalKey]))
+            return Unauthorized();
+
+        // NOTE: ключ необязателен — прямая покупка его не шлёт; при наличии включает дедуп.
+        var idempotencyKey = Request.Headers[InternalApiHeaders.IdempotencyKey].ToString();
+
+        try
+        {
+            await _debitBalance.Handle(new DebitBalanceCommand(idempotencyKey, playerId, request.Amount), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Пополняет баланс игрока (например, получение средств от продажи на аукционе).
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="request">Сумма пополнения.</param>
+    /// <param name="ct">Токен отмены.</param>
+    [HttpPost("players/{playerId:guid}/credit")]
+    public async Task<IActionResult> CreditBalance(Guid playerId, [FromBody] CreditBalanceRequest request, CancellationToken ct = default)
+    {
+        if (!_internalCallerValidator.IsValid(Request.Headers[InternalApiHeaders.InternalKey]))
+            return Unauthorized();
+
+        // NOTE: ключ необязателен — при наличии включает дедуп (расчёт аукциона его шлёт).
+        var idempotencyKey = Request.Headers[InternalApiHeaders.IdempotencyKey].ToString();
+
+        try
+        {
+            await _creditBalance.Handle(new CreditBalanceCommand(idempotencyKey, playerId, request.Amount), ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Возвращает текущий баланс игрока.
+    /// </summary>
+    /// <param name="playerId">Идентификатор игрока.</param>
+    /// <param name="ct">Токен отмены.</param>
+    [HttpGet("players/{playerId:guid}/balance")]
+    public async Task<ActionResult<decimal>> GetBalance(Guid playerId, CancellationToken ct = default)
+    {
+        if (!_internalCallerValidator.IsValid(Request.Headers[InternalApiHeaders.InternalKey]))
+            return Unauthorized();
+
+        try
+        {
+            var balance = await _getBalance.Handle(new GetPlayerBalanceQuery(playerId), ct);
+            return Ok(balance);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+}

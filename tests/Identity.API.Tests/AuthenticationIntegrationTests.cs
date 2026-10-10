@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using GameBackend.Services.Identity.API.Controllers.Dtos;
-using GameBackend.Services.Identity.API.Infrastructure.Persistence;
+using GameBackend.Services.Identity.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;

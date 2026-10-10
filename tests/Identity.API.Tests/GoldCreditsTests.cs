@@ -1,4 +1,4 @@
-using GameBackend.Services.Identity.API.Domain.ValueObjects;
+using GameBackend.Services.Identity.Domain.ValueObjects;
 
 namespace Identity.API.Tests;
 

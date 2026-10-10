@@ -1,7 +1,8 @@
-using GameBackend.Services.Catalog.API.Application.Commands;
-using GameBackend.Services.Catalog.API.Domain;
-using GameBackend.Services.Catalog.API.Infrastructure.Persistence;
-using GameBackend.Services.Catalog.API.Infrastructure.Persistence.Repositories;
+using GameBackend.Services.Catalog.Application.Commands;
+using GameBackend.Services.Catalog.Domain;
+using GameBackend.Services.Catalog.Infrastructure.Persistence;
+using GameBackend.Services.Catalog.Infrastructure.Persistence.Repositories;
+using GameBackend.ServiceDefaults.Persistence;
 using GameBackend.SharedKernel.Domain;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,7 @@ public class IdempotencyTests
         using var _ = connection;
         using var __ = context;
 
-        var handler = new GrantItemCommandHandler(new ItemRepository(context), new InventoryRepository(context), context);
+        var handler = new GrantItemCommandHandler(new ItemRepository(context), new InventoryRepository(context), new ProcessedOperationStore<CatalogDbContext>(context), new EfUnitOfWork<CatalogDbContext>(context));
         var playerId = Guid.NewGuid();
         var command = new GrantItemCommand($"welcome-gift:{playerId}", playerId, "Rifle", "desc", ItemCategory.Weapons, ItemRarity.Common, "img", 100m);
 
@@ -52,7 +53,7 @@ public class IdempotencyTests
         context.Items.Add(item);
         await context.SaveChangesAsync();
 
-        var handler = new AwardItemCommandHandler(new ItemRepository(context), new InventoryRepository(context), context);
+        var handler = new AwardItemCommandHandler(new ItemRepository(context), new InventoryRepository(context), new ProcessedOperationStore<CatalogDbContext>(context), new EfUnitOfWork<CatalogDbContext>(context));
         var winnerId = Guid.NewGuid();
         var command = new AwardItemCommand($"award:{Guid.NewGuid()}", winnerId, item.Id, 1, 200m);
 

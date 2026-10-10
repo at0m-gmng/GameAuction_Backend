@@ -1,6 +1,6 @@
 ﻿using GameBackend.SharedKernel.Domain;
 
-namespace GameBackend.Services.Catalog.API.Domain.Events;
+namespace GameBackend.Services.Catalog.Domain.Events;
 
 /// <summary>
 /// Доменное событие, которое происходит при создании новой каталожной карточки предмета.

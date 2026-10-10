@@ -1,0 +1,25 @@
+using GameBackend.SharedKernel.Application;
+using GameBackend.SharedKernel.Domain;
+
+namespace GameBackend.Services.Catalog.Application.Commands;
+
+/// <summary>
+/// Команда выдачи приватного предмета игроку (например, приветственного подарка).
+/// </summary>
+/// <param name="IdempotencyKey">Ключ идемпотентности — повтор с тем же ключом не выдаёт второй предмет.</param>
+/// <param name="PlayerId">Идентификатор игрока-получателя.</param>
+/// <param name="Name">Название предмета.</param>
+/// <param name="Description">Описание предмета.</param>
+/// <param name="Category">Категория предмета.</param>
+/// <param name="Rarity">Редкость предмета.</param>
+/// <param name="ImageUrl">Ссылка на изображение.</param>
+/// <param name="StartingPrice">Базовая цена предмета.</param>
+public sealed record GrantItemCommand(
+    string IdempotencyKey,
+    Guid PlayerId,
+    string Name,
+    string? Description,
+    ItemCategory Category,
+    ItemRarity Rarity,
+    string? ImageUrl,
+    decimal StartingPrice) : ICommand<Guid>;

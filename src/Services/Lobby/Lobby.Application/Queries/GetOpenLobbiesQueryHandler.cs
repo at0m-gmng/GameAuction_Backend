@@ -1,0 +1,64 @@
+﻿using GameBackend.SharedKernel.Application;
+using GameBackend.Services.Lobby.Application.Interfaces;
+using GameBackend.Services.Lobby.Application.Lobbies;
+using GameBackend.Services.Lobby.Application.Services;
+using GameBackend.Services.Lobby.Domain;
+
+namespace GameBackend.Services.Lobby.Application.Queries;
+
+/// <summary>
+/// Обработчик запроса списка открытых лобби.
+/// </summary>
+public sealed class GetOpenLobbiesQueryHandler : IQueryHandler<GetOpenLobbiesQuery, IReadOnlyCollection<LobbyListDto>>
+{
+    private const int RecentCompletedLimit = 50;
+
+    private readonly ILobbyRepository _repository;
+    private readonly AuctionCompletionService _auctionCompletion;
+
+    /// <summary>
+    /// Инициализирует обработчик репозиторием.
+    /// </summary>
+    /// <param name="repository">Репозиторий лобби.</param>
+    /// <param name="auctionCompletion">Сервис завершения просроченных аукционов.</param>
+    public GetOpenLobbiesQueryHandler(ILobbyRepository repository, AuctionCompletionService auctionCompletion)
+    {
+        _repository = repository;
+        _auctionCompletion = auctionCompletion;
+    }
+
+    /// <summary>
+    /// Возвращает активные лобби и последние завершённые, лениво завершая просроченные (нет таймера — Render засыпает).
+    /// </summary>
+    /// <param name="query">Запрос.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    public async Task<IReadOnlyCollection<LobbyListDto>> Handle(GetOpenLobbiesQuery query, CancellationToken cancellationToken)
+    {
+        var open = await _repository.GetOpenLobbiesAsync(cancellationToken);
+
+        foreach (var lobby in open)
+            await _auctionCompletion.CompleteIfExpiredAsync(lobby, cancellationToken);
+
+        // NOTE: завершённые тянем после цикла — так в список попадут и только что закрывшиеся этим же запросом.
+        var completed = await _repository.GetRecentCompletedLobbiesAsync(RecentCompletedLimit, cancellationToken);
+
+        return open
+            .Where(l => l.Status is LobbyStatus.Gathering or LobbyStatus.Bidding)
+            .Concat(completed)
+            .Select(ToListDto)
+            .ToArray();
+    }
+
+    private static LobbyListDto ToListDto(LobbyAggregate lobby) => new(
+        lobby.Id,
+        lobby.ItemId,
+        lobby.ItemName,
+        lobby.ItemImageUrl,
+        lobby.StartingPrice,
+        lobby.Status,
+        lobby.Participants.Count,
+        lobby.MaxParticipants,
+        lobby.Bids.Select(b => b.PlayerId).Distinct().Count(),
+        lobby.CurrentBid?.Amount ?? lobby.StartingPrice,
+        lobby.EndsAt);
+}

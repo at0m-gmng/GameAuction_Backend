@@ -43,7 +43,7 @@ C4Container
     Rel(catalog, generation, "Наполнить витрину", "HTTP + X-Internal-Key")
     Rel(catalog, lobby, "Создать лобби", "HTTP + X-Internal-Key")
     Rel(catalog, identity, "Списать за покупку", "HTTP + X-Internal-Key")
-    Rel(lobby, catalog, "Передать предмет победителю", "HTTP + X-Internal-Key")
+    Rel(lobby, catalog, "Передать предмет победителю (outbox)", "HTTP + X-Internal-Key")
     Rel(lobby, identity, "Списать/начислить, баланс", "HTTP + X-Internal-Key")
     Rel(lobby, spa, "События аукциона и баланса", "SignalR/WebSocket")
 
@@ -64,3 +64,5 @@ C4Container
 - [0005](adr/0005-http-resilience-deferred.md) — HTTP-resilience (Polly) отложен до идемпотентности
 - [0006](adr/0006-idempotency-cross-service-mutations.md) — идемпотентность межсервисных мутирующих операций
 - [0007](adr/0007-scale-and-security-boundaries.md) — границы масштаба: что сознательно вне объёма
+- [0008](adr/0008-clean-architecture-layers.md) — чистая архитектура: слои сервиса — отдельные проекты
+- [0009](adr/0009-settlement-outbox.md) — transactional outbox для расчёта по аукциону

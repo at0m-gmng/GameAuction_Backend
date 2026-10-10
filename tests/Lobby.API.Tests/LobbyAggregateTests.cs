@@ -1,4 +1,4 @@
-using GameBackend.Services.Lobby.API.Domain;
+using GameBackend.Services.Lobby.Domain;
 using GameBackend.SharedKernel.Domain;
 
 namespace Lobby.API.Tests;
