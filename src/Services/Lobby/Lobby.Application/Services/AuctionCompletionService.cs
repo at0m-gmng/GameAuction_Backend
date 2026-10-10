@@ -6,7 +6,7 @@ using GameBackend.SharedKernel.Application.Persistence;
 namespace GameBackend.Services.Lobby.Application.Services;
 
 /// <summary>
-/// Завершает аукцион — доменом или лениво при чтении просроченного лобби — и ставит расчёт в outbox.
+/// Завершает аукцион — доменом, лениво при чтении просроченного лобби или фоновой проверкой — и ставит расчёт в outbox.
 /// </summary>
 public sealed class AuctionCompletionService
 {
@@ -22,6 +22,28 @@ public sealed class AuctionCompletionService
     {
         _repository = repository;
         _outbox = outbox;
+    }
+
+    /// <summary>
+    /// Находит аукционы, время которых истекло.
+    /// </summary>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Идентификаторы просроченных аукционов.</returns>
+    public Task<IReadOnlyCollection<Guid>> GetExpiredLobbyIdsAsync(CancellationToken cancellationToken) =>
+        _repository.GetExpiredBiddingLobbyIdsAsync(DateTime.UtcNow, cancellationToken);
+
+    /// <summary>
+    /// Загружает лобби заново и обрабатывает его, если оно всё ещё просрочено (повторная проверка на свежих данных).
+    /// </summary>
+    /// <param name="lobbyId">Идентификатор лобби.</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    public async Task CompleteIfExpiredAsync(Guid lobbyId, CancellationToken cancellationToken)
+    {
+        LobbyAggregate? lobby = await _repository.GetByIdAsync(lobbyId, cancellationToken);
+        if (lobby is not null)
+        {
+            await CompleteIfExpiredAsync(lobby, cancellationToken);
+        }
     }
 
     /// <summary>

@@ -22,6 +22,7 @@ public interface IItemRepository
     /// <param name="ids">Идентификаторы предметов.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция найденных предметов.</returns>
+    /// <remarks>Только для чтения: сущности не отслеживаются EF, сохранять их через репозиторий нельзя.</remarks>
     Task<IReadOnlyCollection<Item>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -33,6 +34,7 @@ public interface IItemRepository
     /// <param name="take">Количество элементов, которые нужно получить.</param>
     /// <param name="cancellationToken">Токен отмены операции.</param>
     /// <returns>Коллекция предметов, подходящих под фильтр.</returns>
+    /// <remarks>Только для чтения: сущности не отслеживаются EF, сохранять их через репозиторий нельзя.</remarks>
     Task<IReadOnlyCollection<Item>> GetListAsync(
         ItemCategory? category,
         ItemRarity? minimumRarity,
@@ -46,6 +48,7 @@ public interface IItemRepository
     /// <param name="ownerId">Идентификатор игрока-владельца.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
     /// <returns>Коллекция выставленных предметов владельца.</returns>
+    /// <remarks>Только для чтения: сущности не отслеживаются EF, сохранять их через репозиторий нельзя.</remarks>
     Task<IReadOnlyCollection<Item>> GetListedByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
 
     /// <summary>

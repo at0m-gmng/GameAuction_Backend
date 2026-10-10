@@ -40,12 +40,12 @@ public sealed class GetOpenLobbiesQueryHandler : IQueryHandler<GetOpenLobbiesQue
             await _auctionCompletion.CompleteIfExpiredAsync(lobby, cancellationToken);
 
         // NOTE: завершённые тянем после цикла — так в список попадут и только что закрывшиеся этим же запросом.
-        var completed = await _repository.GetRecentCompletedLobbiesAsync(RecentCompletedLimit, cancellationToken);
+        var completed = await _repository.GetRecentCompletedSummariesAsync(RecentCompletedLimit, cancellationToken);
 
         return open
             .Where(l => l.Status is LobbyStatus.Gathering or LobbyStatus.Bidding)
-            .Concat(completed)
             .Select(ToListDto)
+            .Concat(completed)
             .ToArray();
     }
 

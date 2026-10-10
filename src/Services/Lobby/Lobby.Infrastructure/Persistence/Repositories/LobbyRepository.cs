@@ -1,4 +1,5 @@
 ﻿using GameBackend.Services.Lobby.Application.Interfaces;
+using GameBackend.Services.Lobby.Application.Lobbies;
 using GameBackend.Services.Lobby.Domain;
 using GameBackend.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,8 @@ namespace GameBackend.Services.Lobby.Infrastructure.Persistence.Repositories;
 /// </summary>
 public class LobbyRepository : ILobbyRepository
 {
+    private const string ParticipantsField = "_participants";
+
     private readonly LobbyDbContext _context;
     private readonly IDomainEventDispatcher _dispatcher;
 
@@ -67,20 +70,44 @@ public class LobbyRepository : ILobbyRepository
     }
 
     /// <summary>
-    /// Получает последние завершённые лобби со ставками для показа в общем списке аукционов.
+    /// Получает идентификаторы аукционов в статусе Bidding, время которых истекло к указанному моменту.
+    /// </summary>
+    /// <param name="now">Текущий момент (UTC).</param>
+    /// <param name="cancellationToken">Токен отмены.</param>
+    /// <returns>Идентификаторы просроченных аукционов.</returns>
+    public async Task<IReadOnlyCollection<Guid>> GetExpiredBiddingLobbyIdsAsync(DateTime now, CancellationToken cancellationToken = default) =>
+        await _context.Lobbies
+            .AsNoTracking()
+            .Where(x => x.Status == LobbyStatus.Bidding && x.EndsAt <= now)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+    /// <summary>
+    /// Получает строки списка для последних завершённых лобби — проекцией в БД, без загрузки ставок.
+    /// Поля считаются так же, как в агрегате: текущая ставка — максимальная, иначе стартовая цена.
     /// </summary>
     /// <param name="limit">Максимальное количество.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
-    /// <returns>Коллекция завершённых лобби, новые первыми.</returns>
-    public async Task<IReadOnlyCollection<LobbyAggregate>> GetRecentCompletedLobbiesAsync(int limit, CancellationToken cancellationToken = default)
-    {
-        return await _context.Lobbies
-            .Include(x => x.Bids)
+    /// <returns>Строки списка завершённых лобби, новые первыми.</returns>
+    public async Task<IReadOnlyCollection<LobbyListDto>> GetRecentCompletedSummariesAsync(int limit, CancellationToken cancellationToken = default) =>
+        await _context.Lobbies
+            .AsNoTracking()
             .Where(x => x.Status == LobbyStatus.Completed)
             .OrderByDescending(x => x.EndsAt)
             .Take(limit)
+            .Select(x => new LobbyListDto(
+                x.Id,
+                x.ItemId,
+                x.ItemName,
+                x.ItemImageUrl,
+                x.StartingPrice,
+                x.Status,
+                EF.Property<List<Guid>>(x, ParticipantsField).Count,
+                x.MaxParticipants,
+                x.Bids.Select(b => b.PlayerId).Distinct().Count(),
+                x.Bids.Max(b => (decimal?)b.Amount) ?? x.StartingPrice,
+                x.EndsAt))
             .ToListAsync(cancellationToken);
-    }
 
     /// <summary>
     /// Получает завершённые аукционы игрока со ставками, где он участвовал ставкой — история для профиля.
@@ -91,6 +118,7 @@ public class LobbyRepository : ILobbyRepository
     public async Task<IReadOnlyCollection<LobbyAggregate>> GetPlayerHistoryAsync(Guid playerId, CancellationToken cancellationToken = default)
     {
         return await _context.Lobbies
+            .AsNoTracking()
             .Include(x => x.Bids)
             .Where(x => x.Status == LobbyStatus.Completed && x.Bids.Any(b => b.PlayerId == playerId))
             .OrderByDescending(x => x.EndsAt)

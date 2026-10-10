@@ -26,7 +26,7 @@ public class GenerationPoolRepository : IGenerationPoolRepository
     /// <param name="cancellationToken">Токен отмены.</param>
     public async Task<IReadOnlyCollection<ItemArchetype>> GetArchetypesAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.ItemArchetypes.ToListAsync(cancellationToken);
+        return await _context.ItemArchetypes.AsNoTracking().ToListAsync(cancellationToken);
     }
 
     /// <summary>
@@ -35,6 +35,6 @@ public class GenerationPoolRepository : IGenerationPoolRepository
     /// <param name="cancellationToken">Токен отмены.</param>
     public async Task<IReadOnlyCollection<RarityTier>> GetRarityTiersAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.RarityTiers.ToListAsync(cancellationToken);
+        return await _context.RarityTiers.AsNoTracking().ToListAsync(cancellationToken);
     }
 }
