@@ -21,7 +21,7 @@
 
 Витрина Catalog.API наполняется через Generation.API: инициализатор при старте держит в витрине заданное число публичных лотов (`Marketplace:PublicCatalogSeedCount`) — недостающие догенерирует, распроданные и лишние снимает с публикации. Фронтенд работает с реальными данными — каталог, инвентарь, лобби и ставки, моков нет.
 
-Межсервисные вызовы (Identity → Catalog/Generation, Lobby → Identity/Catalog) идут напрямую по HTTP с общим секретом в заголовке `X-Internal-Key` (в проде — HTTPS через публичные URL Render; `http://localhost` в appsettings — только локально); очереди сообщений в проекте нет. Клиенты обёрнуты в resilience-пайплайн (retry + circuit breaker + timeout), мутирующие операции идемпотентны (ключ `Idempotency-Key` + журнал), а сквозной `X-Correlation-ID` связывает логи одного действия через все сервисы. События реального времени рассылаются через SignalR-хаб Lobby.API (`/hubs/lobby`), изменение баланса пушится адресно затронутому игроку.
+Межсервисные вызовы (Identity → Catalog/Generation, Lobby → Identity/Catalog) идут напрямую по HTTP с общим секретом в заголовке `X-Internal-Key` (в проде — HTTPS через публичные URL Render; `http://localhost` в appsettings — только локально); брокера сообщений нет. Расчёт по завершённому аукциону доставляется через transactional outbox в БД Lobby.API с повторами ([ADR 0009](docs/adr/0009-settlement-outbox.md)). Клиенты обёрнуты в resilience-пайплайн (retry + circuit breaker + timeout), мутирующие операции идемпотентны (ключ `Idempotency-Key` + журнал), а сквозной `X-Correlation-ID` связывает логи одного действия через все сервисы. События реального времени рассылаются через SignalR-хаб Lobby.API (`/hubs/lobby`), изменение баланса пушится адресно затронутому игроку.
 
 У каждого сервиса есть health-check `/health` (проверка подключения к своей БД); у Identity/Catalog/Lobby — интерактивная API-документация `/scalar/v1` поверх OpenAPI (со схемой Bearer: токен из `/api/auth/login` вставляется в Scalar для вызова защищённых методов).
 
@@ -29,7 +29,7 @@
 
 Каждый сервис разбит по чистой архитектуре на проекты `Domain` → `Application` → `Infrastructure` → `API` (см. [ADR 0008](docs/adr/0008-clean-architecture-layers.md)).
 
-C4-диаграммы (context, container) и обоснование ключевых решений — в [`docs/architecture.md`](docs/architecture.md). Осознанные архитектурные выборы (EnsureCreated вместо миграций, `X-Internal-Key`, отсутствие outbox, пуш баланса по SignalR) и **границы масштаба** — что сознательно вне объёма при текущем масштабе и как это развивать (RS256, трейсинг, кеш, Vault и т.п.) — зафиксированы как ADR в [`docs/adr/`](docs/adr/).
+C4-диаграммы (context, container) и обоснование ключевых решений — в [`docs/architecture.md`](docs/architecture.md). Осознанные архитектурные выборы (EnsureCreated вместо миграций, `X-Internal-Key`, outbox расчётов без брокера, пуш баланса по SignalR) и **границы масштаба** — что сознательно вне объёма при текущем масштабе и как это развивать (RS256, трейсинг, кеш, Vault и т.п.) — зафиксированы как ADR в [`docs/adr/`](docs/adr/).
 
 ## Технологический стек
 

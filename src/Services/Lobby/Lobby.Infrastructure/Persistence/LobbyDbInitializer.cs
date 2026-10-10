@@ -9,6 +9,32 @@ namespace GameBackend.Services.Lobby.Infrastructure.Persistence;
 /// </summary>
 public static class LobbyDbInitializer
 {
+    private const string CreateOpenLobbyUniqueIndexSql =
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_Lobbies_ItemId_Status"
+        ON "Lobbies" ("ItemId", "Status")
+        WHERE "Status" IN (100, 200);
+        """;
+
+    private const string CreateSettlementMessagesSql =
+        """
+        CREATE TABLE IF NOT EXISTS "SettlementMessages" (
+            "Id" uuid NOT NULL,
+            "LobbyId" uuid NOT NULL,
+            "ItemId" uuid NOT NULL,
+            "WinnerId" uuid NOT NULL,
+            "Amount" numeric(18,2) NOT NULL,
+            "CreatedAt" timestamp with time zone NOT NULL,
+            "NextAttemptAt" timestamp with time zone NOT NULL,
+            "ProcessedAt" timestamp with time zone,
+            "Attempts" integer NOT NULL,
+            "LastError" character varying(2000),
+            CONSTRAINT "PK_SettlementMessages" PRIMARY KEY ("Id")
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS "IX_SettlementMessages_LobbyId" ON "SettlementMessages" ("LobbyId");
+        CREATE INDEX IF NOT EXISTS "IX_SettlementMessages_ProcessedAt_NextAttemptAt" ON "SettlementMessages" ("ProcessedAt", "NextAttemptAt");
+        """;
+
     /// <summary>
     /// Создаёт область DI, резолвит контекст и выполняет <see cref="InitializeAsync"/>.
     /// </summary>
@@ -31,26 +57,20 @@ public static class LobbyDbInitializer
     /// <param name="cancellationToken">Токен отмены.</param>
     public static async Task InitializeAsync(LobbyDbContext context, ILogger logger, CancellationToken cancellationToken = default)
     {
-        // NOTE: EnsureCreated не донакатывает индексы/колонки в уже существующую таблицу — патч идемпотентен.
         await context.Database.EnsureCreatedAsync(cancellationToken);
 
-        if (!context.Database.IsNpgsql())
-            return;
+        if (context.Database.IsNpgsql())
+        {
+            await context.Database.ExecuteSqlRawAsync(CreateSettlementMessagesSql, cancellationToken);
 
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(
-                """
-                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Lobbies_ItemId_Status"
-                ON "Lobbies" ("ItemId", "Status")
-                WHERE "Status" IN (100, 200);
-                """,
-                cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            // NOTE: best-effort — старый дубль в данных не должен ронять запуск; race тогда остаётся открытой.
-            logger.LogWarning(ex, "Не удалось создать индекс IX_Lobbies_ItemId_Status — защита от гонки не активна");
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(CreateOpenLobbyUniqueIndexSql, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Не удалось создать индекс IX_Lobbies_ItemId_Status — защита от гонки не активна");
+            }
         }
     }
 }

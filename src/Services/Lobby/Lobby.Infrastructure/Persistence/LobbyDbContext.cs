@@ -1,5 +1,6 @@
 ﻿using GameBackend.Services.Lobby.Domain;
 using GameBackend.ServiceDefaults.Persistence;
+using GameBackend.Services.Lobby.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace GameBackend.Services.Lobby.Infrastructure.Persistence;
@@ -22,6 +23,11 @@ public class LobbyDbContext : ServiceDbContext
     /// Таблица лобби.
     /// </summary>
     public DbSet<LobbyAggregate> Lobbies => Set<LobbyAggregate>();
+
+    /// <summary>
+    /// Outbox расчётов по завершённым аукционам.
+    /// </summary>
+    public DbSet<SettlementMessage> SettlementMessages => Set<SettlementMessage>();
 
     /// <summary>
     /// Применяет конфигурации маппинга из сборки.

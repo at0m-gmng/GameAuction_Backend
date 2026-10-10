@@ -1,40 +1,27 @@
 using GameBackend.Services.Lobby.Application.Interfaces;
+using GameBackend.Services.Lobby.Application.Settlement;
 using GameBackend.Services.Lobby.Domain;
-using Microsoft.Extensions.Logging;
+using GameBackend.SharedKernel.Application.Persistence;
 
 namespace GameBackend.Services.Lobby.Application.Services;
 
 /// <summary>
-/// Завершает аукцион и рассчитывается с победителем — доменом или лениво при чтении просроченного лобби.
+/// Завершает аукцион — доменом или лениво при чтении просроченного лобби — и ставит расчёт в outbox.
 /// </summary>
 public sealed class AuctionCompletionService
 {
     private readonly ILobbyRepository _repository;
-    private readonly IIdentityServiceClient _identityClient;
-    private readonly ICatalogServiceClient _catalogClient;
-    private readonly IPlayerNotifier _notifier;
-    private readonly ILogger<AuctionCompletionService> _logger;
+    private readonly ISettlementOutbox _outbox;
 
     /// <summary>
     /// Инициализирует сервис зависимостями.
     /// </summary>
     /// <param name="repository">Репозиторий лобби.</param>
-    /// <param name="identityClient">Клиент к Identity.API (списание баланса).</param>
-    /// <param name="catalogClient">Клиент к Catalog.API (передача предмета).</param>
-    /// <param name="notifier">Адресные уведомления об изменении баланса.</param>
-    /// <param name="logger">Логгер.</param>
-    public AuctionCompletionService(
-        ILobbyRepository repository,
-        IIdentityServiceClient identityClient,
-        ICatalogServiceClient catalogClient,
-        IPlayerNotifier notifier,
-        ILogger<AuctionCompletionService> logger)
+    /// <param name="outbox">Outbox расчётов.</param>
+    public AuctionCompletionService(ILobbyRepository repository, ISettlementOutbox outbox)
     {
         _repository = repository;
-        _identityClient = identityClient;
-        _catalogClient = catalogClient;
-        _notifier = notifier;
-        _logger = logger;
+        _outbox = outbox;
     }
 
     /// <summary>
@@ -44,21 +31,24 @@ public sealed class AuctionCompletionService
     /// <param name="cancellationToken">Токен отмены.</param>
     public async Task CompleteIfExpiredAsync(LobbyAggregate lobby, CancellationToken cancellationToken)
     {
-        if (lobby.Status != LobbyStatus.Bidding || lobby.EndsAt is null || lobby.EndsAt > DateTime.UtcNow)
-            return;
-
-        if (lobby.CurrentBid is null)
+        if (lobby.Status == LobbyStatus.Bidding && lobby.EndsAt is not null && lobby.EndsAt <= DateTime.UtcNow)
         {
-            lobby.ExpireWithoutBids();
-            await _repository.SaveAsync(lobby, cancellationToken);
-            return;
+            if (lobby.CurrentBid is null)
+            {
+                lobby.ExpireWithoutBids();
+                await _repository.SaveAsync(lobby, cancellationToken);
+            }
+            else
+            {
+                await CompleteAsync(lobby, cancellationToken);
+            }
         }
-
-        await CompleteAsync(lobby, cancellationToken);
     }
 
     /// <summary>
-    /// Завершает аукцион, сохраняет лобби и best-effort рассчитывается с победителем и продавцом.
+    /// Завершает аукцион и сохраняет лобби вместе с расчётом в outbox — атомарно, одним сохранением.
+    /// Сам расчёт (предмет, списание, начисление) проводит фоновый обработчик outbox с повторами.
+    /// Если параллельный запрос уже завершил это лобби, уникальный индекс outbox отклонит дубль — это не ошибка.
     /// </summary>
     /// <param name="lobby">Уже загруженный агрегат лобби.</param>
     /// <param name="cancellationToken">Токен отмены.</param>
@@ -66,30 +56,17 @@ public sealed class AuctionCompletionService
     {
         lobby.Complete();
 
-        await _repository.SaveAsync(lobby, cancellationToken);
-
-        if (lobby.WinnerId is null || lobby.CurrentBid is null)
-            return;
+        if (lobby.WinnerId.HasValue && lobby.CurrentBid is not null)
+        {
+            _outbox.Enqueue(new AuctionSettlement(lobby.Id, lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount));
+        }
 
         try
         {
-            var sellerId = await _catalogClient.AwardItemAsync(
-                lobby.ItemId, lobby.WinnerId.Value, lobby.CurrentBid.Amount, $"award:{lobby.Id}", cancellationToken);
-
-            await _identityClient.DebitAsync(lobby.WinnerId.Value, lobby.CurrentBid.Amount, $"debit:{lobby.Id}", cancellationToken);
-            await _notifier.NotifyBalanceChangedAsync(lobby.WinnerId.Value, cancellationToken);
-
-            if (sellerId.HasValue)
-            {
-                await _identityClient.CreditAsync(sellerId.Value, lobby.CurrentBid.Amount, $"credit:{lobby.Id}", cancellationToken);
-                await _notifier.NotifyBalanceChangedAsync(sellerId.Value, cancellationToken);
-                _logger.LogInformation("Продавец {SellerId} получил {Amount} за предмет {ItemId} в лобби {LobbyId}",
-                    sellerId.Value, lobby.CurrentBid.Amount, lobby.ItemId, lobby.Id);
-            }
+            await _repository.SaveAsync(lobby, cancellationToken);
         }
-        catch (Exception ex)
+        catch (DuplicateEntryException)
         {
-            _logger.LogWarning(ex, "Не удалось провести расчёт по лобби {LobbyId} с победителем {WinnerId}", lobby.Id, lobby.WinnerId);
         }
     }
 }
