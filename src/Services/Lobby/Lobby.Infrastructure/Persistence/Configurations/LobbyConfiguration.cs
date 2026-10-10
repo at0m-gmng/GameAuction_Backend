@@ -1,0 +1,65 @@
+﻿using GameBackend.Services.Lobby.Domain;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace GameBackend.Services.Lobby.Infrastructure.Persistence.Configurations;
+
+/// <summary>
+/// Конфигурация маппинга агрегата Lobby на таблицу Lobbies.
+/// </summary>
+public class LobbyConfiguration : IEntityTypeConfiguration<LobbyAggregate>
+{
+    private const int ItemNameMaxLength = 200;
+    private const int ImageUrlMaxLength = 2000;
+    private const int PricePrecision = 18;
+    private const int PriceScale = 2;
+
+    /// <summary>
+    /// Настраивает маппинг агрегата Lobby.
+    /// </summary>
+    /// <param name="builder">Построитель сущности.</param>
+    public void Configure(EntityTypeBuilder<LobbyAggregate> builder)
+    {
+        builder.ToTable("Lobbies");
+
+        builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.ItemId).IsRequired();
+        builder.Property(x => x.ItemName).HasMaxLength(ItemNameMaxLength).IsRequired();
+        builder.Property(x => x.ItemImageUrl).HasMaxLength(ImageUrlMaxLength);
+        builder.Property(x => x.ItemRarity).IsRequired();
+        builder.Property(x => x.StartingPrice).HasPrecision(PricePrecision, PriceScale);
+        builder.Property(x => x.Status).IsRequired();
+        builder.Property(x => x.MaxParticipants).IsRequired();
+
+        // NOTE: участники — массив uuid[] в PostgreSQL, а не отдельная таблица.
+        builder.Ignore(x => x.Participants);
+        builder.PrimitiveCollection<List<Guid>>("_participants")
+            .HasColumnName("Participants");
+
+        // NOTE: заходившие в раунде — тоже массив uuid[]; по нему решаем, продлевать ли таймер новому входу.
+        builder.Ignore(x => x.SeenPlayers);
+        builder.PrimitiveCollection<List<Guid>>("_seenPlayers")
+            .HasColumnName("SeenPlayers");
+
+        builder.OwnsMany(x => x.Bids, bids =>
+        {
+            bids.ToTable("Bids");
+            bids.WithOwner().HasForeignKey("LobbyId");
+            bids.HasKey(x => x.Id);
+            bids.Property(x => x.PlayerId).IsRequired();
+            bids.Property(x => x.Amount).HasPrecision(PricePrecision, PriceScale);
+            bids.Property(x => x.PlacedAt).IsRequired();
+        });
+
+        // NOTE: CurrentBid вычисляется из Bids, отдельно не персистим.
+        builder.Ignore(x => x.CurrentBid);
+
+        builder.HasIndex(x => x.Status);
+
+        // NOTE: уникальный индекс (ItemId, Status) для открытых лобби — база не даст создать второе лобби предмета.
+        builder.HasIndex(x => new { x.ItemId, x.Status })
+            .HasFilter("\"Status\" IN (100, 200)")
+            .IsUnique();
+    }
+}

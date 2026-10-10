@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Services\Lobby.API\Lobby.API.csproj" />
+    <ProjectReference Include="..\..\src\Services\Lobby\Lobby.API\Lobby.API.csproj" />
   </ItemGroup>
 
 </Project>

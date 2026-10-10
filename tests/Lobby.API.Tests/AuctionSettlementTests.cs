@@ -1,11 +1,7 @@
-using GameBackend.Services.Lobby.API.Application.Interfaces;
-using GameBackend.Services.Lobby.API.Application.Services;
-using GameBackend.Services.Lobby.API.Domain;
-using GameBackend.Services.Lobby.API.Hubs;
-using GameBackend.Services.Lobby.API.Infrastructure.ExternalServices;
+using GameBackend.Services.Lobby.Application.Interfaces;
+using GameBackend.Services.Lobby.Application.Services;
+using GameBackend.Services.Lobby.Domain;
 using GameBackend.SharedKernel.Domain;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Lobby.API.Tests;
@@ -63,12 +59,15 @@ public class AuctionSettlementTests
         public Task SaveAsync(LobbyAggregate lobby, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
-    private static IHubContext<LobbyHub> NoopHub()
+    private sealed class FakePlayerNotifier : IPlayerNotifier
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSignalR();
-        return services.BuildServiceProvider().GetRequiredService<IHubContext<LobbyHub>>();
+        public List<Guid> Notified { get; } = new();
+
+        public Task NotifyBalanceChangedAsync(Guid playerId, CancellationToken cancellationToken)
+        {
+            Notified.Add(playerId);
+            return Task.CompletedTask;
+        }
     }
 
     private static LobbyAggregate BiddingLobbyWithWinner(Guid itemId, Guid winner, decimal bid)
@@ -90,7 +89,7 @@ public class AuctionSettlementTests
 
         var catalog = new FakeCatalogServiceClient(sellerId);
         var identity = new FakeIdentityServiceClient();
-        var service = new AuctionCompletionService(new FakeLobbyRepository(), identity, catalog, NoopHub(), NullLogger<AuctionCompletionService>.Instance);
+        var service = new AuctionCompletionService(new FakeLobbyRepository(), identity, catalog, new FakePlayerNotifier(), NullLogger<AuctionCompletionService>.Instance);
 
         await service.CompleteAsync(lobby, CancellationToken.None);
 
@@ -114,7 +113,7 @@ public class AuctionSettlementTests
 
         var catalog = new FakeCatalogServiceClient(seller: null);
         var identity = new FakeIdentityServiceClient();
-        var service = new AuctionCompletionService(new FakeLobbyRepository(), identity, catalog, NoopHub(), NullLogger<AuctionCompletionService>.Instance);
+        var service = new AuctionCompletionService(new FakeLobbyRepository(), identity, catalog, new FakePlayerNotifier(), NullLogger<AuctionCompletionService>.Instance);
 
         await service.CompleteAsync(lobby, CancellationToken.None);
 

@@ -1,6 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
-using GameBackend.Services.Identity.API.Infrastructure.Security;
-using GameBackend.SharedKernel.Security;
+using GameBackend.Services.Identity.Infrastructure.Security;
+using GameBackend.ServiceDefaults.Security;
 
 namespace Identity.API.Tests;
 

@@ -1,0 +1,11 @@
+using GameBackend.SharedKernel.Application;
+
+namespace GameBackend.Services.Identity.Application.Commands;
+
+/// <summary>
+/// Команда пополнения баланса игрока (например, получение средств от продажи на аукционе).
+/// </summary>
+/// <param name="IdempotencyKey">Ключ идемпотентности — повтор с тем же ключом не начисляет дважды.</param>
+/// <param name="PlayerId">Идентификатор игрока.</param>
+/// <param name="Amount">Сумма пополнения.</param>
+public sealed record CreditBalanceCommand(string IdempotencyKey, Guid PlayerId, decimal Amount) : ICommand;
